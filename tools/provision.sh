@@ -18,6 +18,11 @@ sudo cp -a /usr/share/tests/osbuild-composer/composer/osbuild-composer.toml \
 sudo cp -a /usr/share/tests/osbuild-composer/composer/osbuild-worker.toml \
     /etc/osbuild-worker/
 
+# if GCP credentials are defined in the ENV, add them to the worker's configuration
+if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+    echo -e "\n[gcp]\ncredentials = \"$GOOGLE_APPLICATION_CREDENTIALS\"\n" >> /etc/osbuild-worker/osbuild-worker.toml
+fi
+
 # Copy rpmrepo snapshots for use in weldr tests
 sudo mkdir -p /etc/osbuild-composer/repositories
 # Copy all fedora repo overrides
