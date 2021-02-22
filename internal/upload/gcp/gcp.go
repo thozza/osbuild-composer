@@ -17,6 +17,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	cloudbuildpb "google.golang.org/genproto/googleapis/devtools/cloudbuild/v1"
@@ -31,6 +32,7 @@ func New(credentials []byte) (*GCP, error) {
 	scopes := []string{
 		compute.ComputeScope,   // permissions to image
 		storage.ScopeReadWrite, // file upload
+		iam.CloudPlatformScope, // creation of custom role
 	}
 	scopes = append(scopes, cloudbuild.DefaultAuthScopes()...) // image import
 
@@ -413,6 +415,146 @@ func (g *GCP) Share(imageName string, shareWith []string) error {
 
 	// For now, the decision is that the account should not get any role to the
 	// project, where the image has been imported.
+	// if err = g.GrantImagesListOnProjectWithContect(ctx, shareWith); err != nil {
+	// 	return fmt.Errorf("failed to grant ImageList role on the project: %v", err)
+	// }
+
+	return nil
+}
+
+// GrantImagesListOnProjectWithContect grants an "imagesList" role on the
+// respective project to the list of accounts, so that they can list and see
+// shared imagess.
+//
+// "shareWith" is a list of accounts to share the image with. Items can be one
+// of the following options:
+//
+// - `user:{emailid}`: An email address that represents a specific
+//	 Google account. For example, `alice@example.com`.
+//
+// - `serviceAccount:{emailid}`: An email address that represents a
+//   service account. For example, `my-other-app@appspot.gserviceaccount.com`.
+//
+// - `group:{emailid}`: An email address that represents a Google group.
+//   For example, `admins@example.com`.
+//
+// - `domain:{domain}`: The G Suite domain (primary) that represents all
+//   the users of that domain. For example, `google.com` or `example.com`.
+//
+// Uses:
+//	- Cloud Resource Manager API
+//  - AIM API
+func (g *GCP) GrantImagesListOnProjectWithContect(ctx context.Context, shareWith []string) error {
+	iamService, err := iam.NewService(ctx, option.WithCredentials(g.creds))
+	if err != nil {
+		return fmt.Errorf("failed to get IAM client: %v", err)
+	}
+
+	resourceMngrService, err := cloudresourcemanager.NewService(ctx, option.WithCredentials(g.creds))
+	if err != nil {
+		return fmt.Errorf("failed to get Cloud Resource Manager client: %v", err)
+	}
+
+	projectDesiredRoleID := "compute.imagesList"
+	projectDesiredRole := fmt.Sprintf(
+		"projects/%s/roles/%s",
+		g.creds.ProjectID,
+		projectDesiredRoleID,
+	)
+
+	// Check if the Images List role exists and if not, create it
+	getRolesCall := iamService.Roles.Get(projectDesiredRole)
+	imagesListRole, err := getRolesCall.Do()
+	// TODO: it may make sense to verify, that the role is active (not deleted/disabled)
+	if err != nil {
+		// Role was not found, create it
+		if strings.Contains(err.Error(), "Error 404") {
+			imagesListRole = &iam.Role{
+				IncludedPermissions: []string{
+					"compute.images.list",
+					"resourcemanager.projects.get",
+				},
+				Description: "Custom role to allow listing of Images",
+				Title:       "Compute Images List",
+				Stage:       "GA",
+			}
+			createRoleReq := &iam.CreateRoleRequest{
+				Role:   imagesListRole,
+				RoleId: projectDesiredRoleID,
+			}
+			createRoleCall := iamService.Projects.Roles.Create(
+				fmt.Sprintf("projects/%s", g.creds.ProjectID),
+				createRoleReq,
+			)
+			fmt.Printf("[GCP] 🛡️  Creating a new custom role '%s'\n", projectDesiredRole)
+			imagesListRole, err = createRoleCall.Do()
+			if err != nil {
+				return fmt.Errorf("failed to create a new custom role: %v", err)
+			}
+		} else {
+			return fmt.Errorf("failed to get role '%s': %v", projectDesiredRole, err)
+		}
+	}
+
+	// Get the project's policy
+	getProjectPolicyCall := resourceMngrService.Projects.GetIamPolicy(
+		g.creds.ProjectID,
+		&cloudresourcemanager.GetIamPolicyRequest{},
+	)
+	projectPolicy, err := getProjectPolicyCall.Do()
+	if err != nil {
+		return fmt.Errorf("failed to get project's policy: %v", err)
+	}
+
+	// Go through the existing project policy and look up a binding for specific
+	// role "projects/<project_id>/roles/compute.imagesList" and add the acount
+	// to the list, if it is not already there.
+	bindings := projectPolicy.Bindings
+	roleBindingExists := false
+	for _, b := range bindings {
+		if b.Role == projectDesiredRole {
+			roleBindingExists = true
+			// check each account, tha the image should be shared with
+			for _, shareAccount := range shareWith {
+				// check if the account is already member of the role
+				found := false
+				for _, m := range b.Members {
+					if m == shareAccount {
+						found = true
+						break
+					}
+				}
+				// the account is not in the list, add it
+				if !found {
+					fmt.Printf("[GCP] 🛡️  Granting new role '%s' to '%s' in project '%s'\n", projectDesiredRole, shareAccount, g.creds.ProjectID)
+					b.Members = append(b.Members, shareAccount)
+				}
+			}
+		}
+	}
+	// If a binding for the desired role does not exist in the project's policy
+	// yet, then no new members were added by the previous code block.
+	// Create a new binding and add it to the list of bindings of the policy.
+	if !roleBindingExists {
+		fmt.Printf("[GCP] 🛡️  Granting new role '%s' to '%v' in project '%s'\n", projectDesiredRole, shareWith, g.creds.ProjectID)
+		bindings = append(bindings, &cloudresourcemanager.Binding{
+			Members: shareWith,
+			Role:    projectDesiredRole,
+		})
+	}
+
+	// Update the project's policy with new list of bindings
+	setProjectPolicyReq := &cloudresourcemanager.SetIamPolicyRequest{
+		Policy: &cloudresourcemanager.Policy{
+			Bindings: bindings,
+			Etag:     projectPolicy.Etag,
+		},
+	}
+	setProjectPolicyCall := resourceMngrService.Projects.SetIamPolicy(g.creds.ProjectID, setProjectPolicyReq)
+	projectPolicy, err = setProjectPolicyCall.Do()
+	if err != nil {
+		return fmt.Errorf("failed to set new project policy: %v", err)
+	}
 
 	return nil
 }
