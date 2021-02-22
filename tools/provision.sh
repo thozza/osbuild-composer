@@ -12,8 +12,11 @@ if [[ $ID == rhel || $ID == centos ]]; then
 fi
 
 sudo mkdir -p /etc/osbuild-composer
-sudo cp -a /usr/share/tests/osbuild-composer/composer/*.toml \
+sudo mkdir -p /etc/osbuild-worker
+sudo cp -a /usr/share/tests/osbuild-composer/composer/osbuild-composer.toml \
     /etc/osbuild-composer/
+sudo cp -a /usr/share/tests/osbuild-composer/composer/osbuild-worker.toml \
+    /etc/osbuild-worker/
 
 # Copy rpmrepo snapshots for use in weldr tests
 sudo mkdir -p /etc/osbuild-composer/repositories
