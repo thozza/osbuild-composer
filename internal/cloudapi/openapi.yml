@@ -122,6 +122,15 @@ components:
         ami_id:
           type: string
           example: 'ami-0c830793775595d4b'
+    GCPUploadStatus:
+      type: object
+      properties:
+        project_id:
+          type: string
+          example: 'ascendant-braid-303513'
+        image_name:
+          type: string
+          example: 'my-image'
     ComposeRequest:
       type: object
       required:
@@ -188,9 +197,10 @@ components:
         options:
           oneOf:
             -  $ref: '#/components/schemas/AWSUploadRequestOptions'
+            -  $ref: '#/components/schemas/GCPUploadRequestOptions'
     UploadTypes:
       type: string
-      enum: ['aws']
+      enum: ['aws', 'gcp']
     AWSUploadRequestOptions:
       type: object
       required:
@@ -241,6 +251,36 @@ components:
         share_with_accounts:
           type: array
           example: ['123456789012']
+          items:
+            type: string
+    GCPUploadRequestOptions:
+      type: object
+      required:
+        - bucket
+      properties:
+        region:
+          type: string
+          example: 'eu'
+          description: 'A valid GCP location. See https://cloud.google.com/storage/docs/locations'
+        bucket:
+          type: string
+          example: 'my-example-bucket'
+# don't expose the os type for now
+#        os:
+#          type: string
+#          example: 'rhel-8-byol'
+#          description: 'OS of the disk image being imported needed for installation of GCP guest tools.'
+        image_name:
+          type: string
+          example: 'my-image'
+        share_with_accounts:
+          type: array
+          example: [
+            'user:alice@example.com',
+            'serviceAccount:my-other-app@appspot.gserviceaccount.com',
+            'group:admins@example.com',
+            'domain:example.com'
+            ]
           items:
             type: string
     Customizations:
