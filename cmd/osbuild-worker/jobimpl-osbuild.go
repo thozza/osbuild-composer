@@ -261,6 +261,8 @@ func (impl *OSBuildJobImpl) Run(job worker.Job) error {
 				continue
 			}
 
+			ctx := context.Background()
+
 			g, err := gcp.New(impl.GCPCreds)
 			if err != nil {
 				r = append(r, err)
@@ -268,7 +270,7 @@ func (impl *OSBuildJobImpl) Run(job worker.Job) error {
 			}
 
 			log.Printf("[GCP] 🚀 Uploading image to: %s/%s", options.Bucket, options.Object)
-			_, err = g.StorageObjectUpload(path.Join(outputDirectory, options.Filename),
+			_, err = g.StorageObjectUpload(ctx, path.Join(outputDirectory, options.Filename),
 				options.Bucket, options.Object, map[string]string{gcp.MetadataKeyImageName: t.ImageName})
 			if err != nil {
 				r = append(r, err)
@@ -276,7 +278,7 @@ func (impl *OSBuildJobImpl) Run(job worker.Job) error {
 			}
 
 			log.Printf("[GCP] 📥 Importing image into Compute Node as '%s'", t.ImageName)
-			imageBuild, importErr := g.ComputeImageImport(options.Bucket, options.Object, t.ImageName, options.Os, options.Region)
+			imageBuild, importErr := g.ComputeImageImport(ctx, options.Bucket, options.Object, t.ImageName, options.Os, options.Region)
 			if imageBuild != nil {
 				log.Printf("[GCP] 📜 Image import log URL: %s", imageBuild.LogUrl)
 				log.Printf("[GCP] 🎉 Image import finished with status: %s", imageBuild.Status)
@@ -284,11 +286,11 @@ func (impl *OSBuildJobImpl) Run(job worker.Job) error {
 
 			// Cleanup storage before checking for errors
 			log.Printf("[GCP] 🧹 Deleting uploaded image file: %s/%s", options.Bucket, options.Object)
-			if err = g.StorageObjectDelete(options.Bucket, options.Object); err != nil {
+			if err = g.StorageObjectDelete(ctx, options.Bucket, options.Object); err != nil {
 				log.Printf("[GCP] Encountered error while deleting object: %v", err)
 			}
 
-			deleted, errs := g.StorageImageImportCleanup(t.ImageName)
+			deleted, errs := g.StorageImageImportCleanup(ctx, t.ImageName)
 			for _, d := range deleted {
 				log.Printf("[GCP] 🧹 Deleted image import job file '%s'", d)
 			}
@@ -305,7 +307,7 @@ func (impl *OSBuildJobImpl) Run(job worker.Job) error {
 
 			if len(options.ShareWithAccounts) > 0 {
 				log.Printf("[GCP] 🔗 Sharing the image with: %+v", options.ShareWithAccounts)
-				err = g.ComputeImageShare(t.ImageName, options.ShareWithAccounts)
+				err = g.ComputeImageShare(ctx, t.ImageName, options.ShareWithAccounts)
 				if err != nil {
 					r = append(r, err)
 					continue
