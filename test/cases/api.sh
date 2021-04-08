@@ -346,8 +346,8 @@ function createReqFileGCP() {
   "image_requests": [
     {
       "architecture": "$ARCH",
-      "image_type": "vhd",
-      "repositories": $(jq ".\"$ARCH\"" /usr/share/tests/osbuild-composer/repositories/"$DISTRO".json),
+      "image_type": "gcp-byos",
+      "repositories": $(jq -s ".[0].\"$ARCH\" + .[1].\"$ARCH\"" /usr/share/tests/osbuild-composer/repositories/"$DISTRO".json /usr/share/tests/osbuild-composer/repositories/"$(echo "$DISTRO" | sed s'/\..*//')"-gcp.json),
       "upload_request": {
           "type": "gcp",
           "options": {

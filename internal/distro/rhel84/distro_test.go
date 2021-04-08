@@ -77,6 +77,12 @@ func TestFilenameFromType(t *testing.T) {
 			want1: "application/x-vmdk",
 		},
 		{
+			name:  "gcp-byos",
+			args:  args{"qcow2"},
+			want:  "disk.qcow2",
+			want1: "application/x-qemu-disk",
+		},
+		{
 			name:    "invalid-output-type",
 			args:    args{"foobar"},
 			wantErr: true,
@@ -467,6 +473,7 @@ func TestArchitecture_ListImageTypes(t *testing.T) {
 				"tar",
 				"vhd",
 				"vmdk",
+				"gcp-byos",
 			},
 			rhelAdditionalImageTypes: []string{"rhel-edge-commit", "rhel-edge-container", "rhel-edge-installer"},
 		},

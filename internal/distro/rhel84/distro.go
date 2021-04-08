@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"sort"
+	"strings"
 
 	"github.com/osbuild/osbuild-composer/internal/disk"
 	"github.com/osbuild/osbuild-composer/internal/distro"
@@ -435,7 +436,7 @@ func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOp
 		))
 	} else {
 		// RHSM DNF plugins should be by default disabled on RHEL Guest KVM images
-		if t.Name() == "qcow2" {
+		if t.Name() == "qcow2" || strings.HasPrefix(t.Name(), "gcp") {
 			p.AddStage(osbuild.NewRHSMStage(&osbuild.RHSMStageOptions{
 				DnfPlugins: &osbuild.RHSMStageOptionsDnfPlugins{
 					ProductID: &osbuild.RHSMStageOptionsDnfPlugin{
@@ -1209,6 +1210,97 @@ func newDistro(isCentos bool) distro.Distro {
 		},
 	}
 
+	gcpByosImgType := imageType{
+		name:     "gcp-byos",
+		filename: "disk.qcow2",
+		mimeType: "application/x-qemu-disk",
+		packages: []string{
+			// Defaults taken from other image types
+			"@core",
+			"@base",
+			"langpacks-en",
+
+			// Taken from https://github.com/GoogleCloudPlatform/compute-image-tools/blob/0e0e44825fd74190267c00c8f6fa8dbf32a17d2d/daisy_workflows/image_build/enterprise_linux/kickstart/el8-packages.cfg
+			"acpid",
+			//! lets try to use NM and not to pull in deprecated ISC DHCP
+			//"dhcp-client",
+			"dnf-automatic",
+			//! lets try to not pull in deprecated net-tools
+			//"net-tools",
+			"openssh-server",
+			"python3",
+			"rng-tools",
+			"tar",
+			"vim",
+
+			// GCE guest tools
+			"google-compute-engine",
+			"google-osconfig-agent",
+			"gce-disk-expand",
+
+			// GCP SDK
+			"google-cloud-sdk",
+		},
+		excludedPackages: []string{
+			// Taken from https://github.com/GoogleCloudPlatform/compute-image-tools/blob/0e0e44825fd74190267c00c8f6fa8dbf32a17d2d/daisy_workflows/image_build/enterprise_linux/kickstart/el8-packages.cfg
+			//! lets keep subscription-manager installed in all cases
+			//"subscription-manager",
+			"alsa-utils",
+			"b43-fwcutter",
+			"dmraid",
+			"eject",
+			"gpm",
+			"irqbalance",
+			"microcode_ctl",
+			"smartmontools",
+			"aic94xx-firmware",
+			"atmel-firmware",
+			"b43-openfwwf",
+			"bfa-firmware",
+			"ipw2100-firmware",
+			"ipw2200-firmware",
+			"ivtv-firmware",
+			"iwl100-firmware",
+			"iwl1000-firmware",
+			"iwl3945-firmware",
+			"iwl4965-firmware",
+			"iwl5000-firmware",
+			"iwl5150-firmware",
+			"iwl6000-firmware",
+			"iwl6000g2a-firmware",
+			"iwl6050-firmware",
+			"kernel-firmware",
+			"libertas-usb8388-firmware",
+			"ql2100-firmware",
+			"ql2200-firmware",
+			"ql23xx-firmware",
+			"ql2400-firmware",
+			"ql2500-firmware",
+			"rt61pci-firmware",
+			"rt73usb-firmware",
+			"xorg-x11-drv-ati-firmware",
+			"zd1211-firmware",
+		},
+		enabledServices: []string{
+			"firewalld.service",
+			"sshd.service",
+			"rngd.service",
+			// These should get enabled on installation, but it does not work for some reason
+			// https://github.com/GoogleCloudPlatform/guest-agent/blob/2e65c158280264b5f6b653e8b56f6edbf88add01/packaging/google-guest-agent.spec#L99-L101
+			"google-guest-agent.service",
+			"google-shutdown-scripts.service",
+			"google-startup-scripts.service",
+		},
+		defaultTarget:           "multi-user.target",
+		kernelOptions:           "console=ttyS0,38400n8d net.ifnames=0 biosdevname=0 scsi_mod.use_blk_mq=Y crashkernel=auto",
+		bootable:                true,
+		defaultSize:             4 * GigaByte,
+		partitionTableGenerator: defaultPartitionTable,
+		assembler: func(pt *disk.PartitionTable, options distro.ImageOptions, arch distro.Arch) *osbuild.Assembler {
+			return qemuAssembler(pt, "qcow2", "disk.qcow2", options, arch, "")
+		},
+	}
+
 	r := distribution{
 		buildPackages: []string{
 			"dnf",
@@ -1503,6 +1595,7 @@ func newDistro(isCentos bool) distro.Distro {
 		tarImgType,
 		vhdImgType,
 		vmdkImgType,
+		gcpByosImgType,
 	)
 
 	if !isCentos {
