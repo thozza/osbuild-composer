@@ -24,6 +24,7 @@ require (
 	github.com/google/go-cmp v0.5.4
 	github.com/google/uuid v1.1.2
 	github.com/gophercloud/gophercloud v0.11.0
+	github.com/hashicorp/hcl/v2 v2.9.1
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/kolo/xmlrpc v0.0.0-20200310150728-e0350524596b
 	github.com/labstack/echo/v4 v4.1.11
