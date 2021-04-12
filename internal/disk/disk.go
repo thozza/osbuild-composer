@@ -12,38 +12,38 @@ import (
 
 type PartitionTable struct {
 	// Size of the disk.
-	Size uint64
-	UUID string
+	Size uint64 `hcl:"size"`
+	UUID string `hcl:"uuid"`
 	// Partition table type, e.g. dos, gpt.
-	Type       string
-	Partitions []Partition
+	Type       string      `hcl:"type"`
+	Partitions []Partition `hcl:"partition,block"`
 }
 
 type Partition struct {
-	Start    uint64
-	Size     uint64
-	Type     string
-	Bootable bool
+	Start    uint64 `hcl:"start"`
+	Size     uint64 `hcl:"size"`
+	Type     string `hcl:"type"`
+	Bootable bool   `hcl:"bootable"`
 	// ID of the partition, dos doesn't use traditional UUIDs, therefore this
 	// is just a string.
-	UUID string
+	UUID string `hcl:"uuid"`
 	// If nil, the partition is raw; It doesn't contain a filesystem.
-	Filesystem *Filesystem
+	Filesystem *Filesystem `hcl:"filesystem,optional"`
 }
 
 type Filesystem struct {
-	Type string
+	Type string `hcl:"type"`
 	// ID of the filesystem, vfat doesn't use traditional UUIDs, therefore this
 	// is just a string.
-	UUID       string
-	Label      string
-	Mountpoint string
+	UUID       string `hcl:"uuid"`
+	Label      string `hcl:"label"`
+	Mountpoint string `hcl:"mount_point"`
 	// The fourth field of fstab(5); fs_mntops
-	FSTabOptions string
+	FSTabOptions string `hcl:"fstab_options"`
 	// The fifth field of fstab(5); fs_freq
-	FSTabFreq uint64
+	FSTabFreq uint64 `hcl:"fstab_freq"`
 	// The sixth field of fstab(5); fs_passno
-	FSTabPassNo uint64
+	FSTabPassNo uint64 `hcl:"fstab_passno"`
 }
 
 // Converts PartitionTable to osbuild.QEMUAssemblerOptions that encode

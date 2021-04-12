@@ -1,67 +1,67 @@
 package blueprint
 
 type Customizations struct {
-	Hostname *string                `json:"hostname,omitempty" toml:"hostname,omitempty"`
-	Kernel   *KernelCustomization   `json:"kernel,omitempty" toml:"kernel,omitempty"`
-	SSHKey   []SSHKeyCustomization  `json:"sshkey,omitempty" toml:"sshkey,omitempty"`
-	User     []UserCustomization    `json:"user,omitempty" toml:"user,omitempty"`
-	Group    []GroupCustomization   `json:"group,omitempty" toml:"group,omitempty"`
-	Timezone *TimezoneCustomization `json:"timezone,omitempty" toml:"timezone,omitempty"`
-	Locale   *LocaleCustomization   `json:"locale,omitempty" toml:"locale,omitempty"`
-	Firewall *FirewallCustomization `json:"firewall,omitempty" toml:"firewall,omitempty"`
-	Services *ServicesCustomization `json:"services,omitempty" toml:"services,omitempty"`
+	Hostname *string                `json:"hostname,omitempty" toml:"hostname,omitempty" hcl:"hostname,optional"`
+	Kernel   *KernelCustomization   `json:"kernel,omitempty" toml:"kernel,omitempty" hcl:"kernel,optional"`
+	SSHKey   []SSHKeyCustomization  `json:"sshkey,omitempty" toml:"sshkey,omitempty" hcl:"sshkey,optional"`
+	User     []UserCustomization    `json:"user,omitempty" toml:"user,omitempty" hcl:"user,optional"`
+	Group    []GroupCustomization   `json:"group,omitempty" toml:"group,omitempty" hcl:"group,optional"`
+	Timezone *TimezoneCustomization `json:"timezone,omitempty" toml:"timezone,omitempty" hcl:"timezone,optional"`
+	Locale   *LocaleCustomization   `json:"locale,omitempty" toml:"locale,omitempty" hcl:"locale,optional"`
+	Firewall *FirewallCustomization `json:"firewall,omitempty" toml:"firewall,omitempty" hcl:"firewall,optional"`
+	Services *ServicesCustomization `json:"services,omitempty" toml:"services,omitempty" hcl:"services,optional"`
 }
 
 type KernelCustomization struct {
-	Name   string `json:"name,omitempty" toml:"name,omitempty"`
-	Append string `json:"append" toml:"append"`
+	Name   string `json:"name,omitempty" toml:"name,omitempty" hcl:"name,optional"`
+	Append string `json:"append" toml:"append" hcl:"append"`
 }
 
 type SSHKeyCustomization struct {
-	User string `json:"user" toml:"user"`
-	Key  string `json:"key" toml:"key"`
+	User string `json:"user" toml:"user" hcl:"user"`
+	Key  string `json:"key" toml:"key" hcl:"key"`
 }
 
 type UserCustomization struct {
-	Name        string   `json:"name" toml:"name"`
-	Description *string  `json:"description,omitempty" toml:"description,omitempty"`
-	Password    *string  `json:"password,omitempty" toml:"password,omitempty"`
-	Key         *string  `json:"key,omitempty" toml:"key,omitempty"`
-	Home        *string  `json:"home,omitempty" toml:"home,omitempty"`
-	Shell       *string  `json:"shell,omitempty" toml:"shell,omitempty"`
-	Groups      []string `json:"groups,omitempty" toml:"groups,omitempty"`
-	UID         *int     `json:"uid,omitempty" toml:"uid,omitempty"`
-	GID         *int     `json:"gid,omitempty" toml:"gid,omitempty"`
+	Name        string   `json:"name" toml:"name" hcl:"name"`
+	Description *string  `json:"description,omitempty" toml:"description,omitempty" hcl:"description,optional"`
+	Password    *string  `json:"password,omitempty" toml:"password,omitempty" hcl:"password,optional"`
+	Key         *string  `json:"key,omitempty" toml:"key,omitempty" hcl:"key,optional"`
+	Home        *string  `json:"home,omitempty" toml:"home,omitempty" hcl:"home,optional"`
+	Shell       *string  `json:"shell,omitempty" toml:"shell,omitempty" hcl:"shell,optional"`
+	Groups      []string `json:"groups,omitempty" toml:"groups,omitempty" hcl:"groups,optional"`
+	UID         *int     `json:"uid,omitempty" toml:"uid,omitempty" hcl:"uid,optional"`
+	GID         *int     `json:"gid,omitempty" toml:"gid,omitempty" hcl:"gid,optional"`
 }
 
 type GroupCustomization struct {
-	Name string `json:"name" toml:"name"`
-	GID  *int   `json:"gid,omitempty" toml:"gid,omitempty"`
+	Name string `json:"name" toml:"name" hcl:"name"`
+	GID  *int   `json:"gid,omitempty" toml:"gid,omitempty" hcl:"gid,optional"`
 }
 
 type TimezoneCustomization struct {
-	Timezone   *string  `json:"timezone,omitempty" toml:"timezone,omitempty"`
-	NTPServers []string `json:"ntpservers,omitempty" toml:"ntpservers,omitempty"`
+	Timezone   *string  `json:"timezone,omitempty" toml:"timezone,omitempty" hcl:"timezone,optional"`
+	NTPServers []string `json:"ntpservers,omitempty" toml:"ntpservers,omitempty" hcl:"ntpservers,optional"`
 }
 
 type LocaleCustomization struct {
-	Languages []string `json:"languages,omitempty" toml:"languages,omitempty"`
-	Keyboard  *string  `json:"keyboard,omitempty" toml:"keyboard,omitempty"`
+	Languages []string `json:"languages,omitempty" toml:"languages,omitempty" hcl:"languages,optional"`
+	Keyboard  *string  `json:"keyboard,omitempty" toml:"keyboard,omitempty" hcl:"keyboard,optional"`
 }
 
 type FirewallCustomization struct {
-	Ports    []string                       `json:"ports,omitempty" toml:"ports,omitempty"`
-	Services *FirewallServicesCustomization `json:"services,omitempty" toml:"services,omitempty"`
+	Ports    []string                       `json:"ports,omitempty" toml:"ports,omitempty" hcl:"ports,optional"`
+	Services *FirewallServicesCustomization `json:"services,omitempty" toml:"services,omitempty" hcl:"services,optional"`
 }
 
 type FirewallServicesCustomization struct {
-	Enabled  []string `json:"enabled,omitempty" toml:"enabled,omitempty"`
-	Disabled []string `json:"disabled,omitempty" toml:"disabled,omitempty"`
+	Enabled  []string `json:"enabled,omitempty" toml:"enabled,omitempty" hcl:"enabled,optional"`
+	Disabled []string `json:"disabled,omitempty" toml:"disabled,omitempty" hcl:"disabled,optional"`
 }
 
 type ServicesCustomization struct {
-	Enabled  []string `json:"enabled,omitempty" toml:"enabled,omitempty"`
-	Disabled []string `json:"disabled,omitempty" toml:"disabled,omitempty"`
+	Enabled  []string `json:"enabled,omitempty" toml:"enabled,omitempty" hcl:"enabled,optional"`
+	Disabled []string `json:"disabled,omitempty" toml:"disabled,omitempty" hcl:"disabled,optional"`
 }
 
 type CustomizationError struct {

@@ -99,8 +99,8 @@ func (pkg Package) ToPackageInfo() PackageInfo {
 // The inputs to depsolve, a set of packages to include and a set of
 // packages to exclude.
 type PackageSet struct {
-	Include []string
-	Exclude []string
+	Include []string `hcl:"include"`
+	Exclude []string `hcl:"exclude"`
 }
 
 // TODO: the public API of this package should not be reused for serialization.
