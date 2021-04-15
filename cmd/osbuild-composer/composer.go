@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/osbuild/osbuild-composer/internal/cloudapi"
 	"github.com/osbuild/osbuild-composer/internal/common"
@@ -102,6 +103,19 @@ func (c *Composer) InitWeldr(repoPaths []string, weldrListener net.Listener) err
 	repos, err := rpmmd.LoadRepositories(repoPaths, name)
 	if err != nil {
 		return fmt.Errorf("Error loading repositories for %s: %v", hostDistro.Name(), err)
+	}
+
+	// Check available image types for any special image types
+	// requiring additional repositories.
+	for _, image_type := range arch.ListImageTypes() {
+		// If the architecture contains GCE image type, add GCP gues tools repository
+		if strings.HasPrefix(image_type, "gcp") {
+			reposGCP, err := rpmmd.LoadRepositories(repoPaths, name+"-gcp")
+			if err != nil {
+				return fmt.Errorf("error loading GCP repositories for %s: %v", hostDistro.Name(), err)
+			}
+			repos[archName] = append(repos[archName], reposGCP[archName]...)
+		}
 	}
 
 	store := store.New(&c.stateDir, arch, c.logger)

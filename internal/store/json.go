@@ -340,6 +340,7 @@ func (store *Store) toStoreV0() *storeV0 {
 var imageTypeCompatMapping = map[string]string{
 	"vhd":                 "Azure",
 	"ami":                 "AWS",
+	"gcp-byos":            "gcp-byos",
 	"liveiso":             "LiveISO",
 	"openstack":           "OpenStack",
 	"qcow2":               "qcow2",
