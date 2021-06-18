@@ -932,23 +932,64 @@ def read_selinux_ctx_mismatch(tree, is_ostree):
     policy_files = glob.glob(f"{tree}/etc/selinux/targeted/policy/policy.*")
     policy_files = sorted(policy_files, reverse=True)
 
+    # TODO: Adjust to check release once https://bugzilla.redhat.com/show_bug.cgi?id=1973754 is resolved!
+    # First verify the policycoreutils version (needs to be >= '3.2'), because RHEL-8 is missing:
+    # https://github.com/SELinuxProject/selinux/commit/c94e542c98da2f26863c1cbd9d7ad9bc5cca6aff
+    policycoreutils_version_ok = False
+
+    # need to determine the version of policycoreutils on the host
+    RPM_CMD = ["rpm", "-q", "policycoreutils", "--qf", "%{VERSION}"]
+    policycoreutils_ver = subprocess.check_output(RPM_CMD).decode()
+
+    policycoreutils_ver_major, policycoreutils_ver_minor = policycoreutils_ver.split(".", maxsplit=1)
+    if int(policycoreutils_ver_major) > 3:
+        policycoreutils_version_ok = True
+    elif int(policycoreutils_ver_major) == 3:
+        if int(policycoreutils_ver_minor) >= 2:
+            policycoreutils_version_ok = True
+
     if policy_files:
-        CMD = [
-            "setfiles",
-            "-r", f"{tree}",
-            "-nvF",
-            "-c", policy_files[0],  # take the policy with the highest number
-            f"{tree}/etc/selinux/targeted/contexts/files/file_contexts",
-            f"{tree}"
-        ]
+        if not policycoreutils_version_ok:
+            print("setfiles: workarounding https://bugzilla.redhat.com/show_bug.cgi?id=1973754", file=sys.stderr)
+            host_policy_files = glob.glob("/etc/selinux/targeted/policy/policy.*")
+            host_policy_files = sorted(host_policy_files, reverse=True)
 
-        if is_ostree:
-            # exclude /etc from being checked when the tree is ostree, because
-            # it is just bind-mounted from /usr/etc and has incorrect selinux
-            # context for /etc path
-            CMD.extend(["-e", f"{tree}/etc"])
+            CMD = [
+                "setfiles",
+                "-r", f"{tree}",
+                "-nvF",
+                # https://bugzilla.redhat.com/show_bug.cgi?id=1973754
+                #"-c", policy_files[0],  # take the policy with the highest number
+                f"{tree}/etc/selinux/targeted/contexts/files/file_contexts",
+                f"{tree}"
+            ]
 
-        output = subprocess.check_output(CMD).decode()
+            if is_ostree:
+                # exclude /etc from being checked when the tree is ostree, because
+                # it is just bind-mounted from /usr/etc and has incorrect selinux
+                # context for /etc path
+                CMD.extend(["-e", f"{tree}/etc"])
+
+            with mount_at(policy_files[0], host_policy_files[0], options=["bind"]):
+                print(subprocess.check_output(f"mount | grep {host_policy_files[0]}", shell=True).decode(),file=sys.stderr)
+                output = subprocess.check_output(CMD).decode()
+        else:
+            CMD = [
+                "setfiles",
+                "-r", f"{tree}",
+                "-nvF",
+                "-c", policy_files[0],  # take the policy with the highest number
+                f"{tree}/etc/selinux/targeted/contexts/files/file_contexts",
+                f"{tree}"
+            ]
+
+            if is_ostree:
+                # exclude /etc from being checked when the tree is ostree, because
+                # it is just bind-mounted from /usr/etc and has incorrect selinux
+                # context for /etc path
+                CMD.extend(["-e", f"{tree}/etc"])
+
+            output = subprocess.check_output(CMD).decode()
 
         # output are lines such as:
         # Would relabel /tmp/tmpwrozmb47/dev from system_u:object_r:root_t:s0 to system_u:object_r:device_t:s0\n
