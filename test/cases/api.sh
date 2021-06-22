@@ -147,10 +147,11 @@ function cleanupGCP() {
   GCP_CMD="${GCP_CMD:-}"
   GCP_IMAGE_NAME="${GCP_IMAGE_NAME:-}"
   GCP_INSTANCE_NAME="${GCP_INSTANCE_NAME:-}"
+  GCP_ZONE="${GCP_ZONE:-}"
 
   if [ -n "$GCP_CMD" ]; then
     set +e
-    $GCP_CMD compute instances delete --zone="$GCP_REGION-a" "$GCP_INSTANCE_NAME"
+    $GCP_CMD compute instances delete --zone="$GCP_ZONE" "$GCP_INSTANCE_NAME"
     $GCP_CMD compute images delete "$GCP_IMAGE_NAME"
     set -e
   fi
@@ -712,12 +713,16 @@ function verifyInGCP() {
   # resource ID can have max 62 characters, the $GCP_TEST_ID_HASH contains 56 characters
   GCP_INSTANCE_NAME="vm-$GCP_TEST_ID_HASH"
 
+  # Randomize the used GCP zone to prevent hitting "exhausted resources" error on each test re-run
+  local GCP_ZONES=($($GCP_CMD compute zones list --filter="region=$GCP_REGION" | jq '.[].name' | tr -d '"' | tr '\n' ' '))
+  GCP_ZONE=$GCP_ZONES[$(($RANDOM % ${#GCP_ZONES[@]}))]
+
   $GCP_CMD compute instances create "$GCP_INSTANCE_NAME" \
-    --zone="$GCP_REGION-a" \
+    --zone="$GCP_ZONE" \
     --image-project="$GCP_PROJECT" \
     --image="$GCP_IMAGE_NAME" \
     --metadata-from-file=ssh-keys="$GCP_SSH_METADATA_FILE"
-  HOST=$($GCP_CMD compute instances describe "$GCP_INSTANCE_NAME" --zone="$GCP_REGION-a" --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+  HOST=$($GCP_CMD compute instances describe "$GCP_INSTANCE_NAME" --zone="$GCP_ZONE" --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
 
   echo "⏱ Waiting for GCP instance to respond to ssh"
   _instanceWaitSSH "$HOST"
