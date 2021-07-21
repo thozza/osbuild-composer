@@ -390,7 +390,8 @@ func TestDistro_ManifestError(t *testing.T) {
 			}
 			imgType, _ := arch.GetImageType(imgTypeName)
 			imgOpts := distro.ImageOptions{
-				Size: imgType.Size(0),
+				Size:               imgType.Size(0),
+				SubscriptionMethod: distro.SubscriptionMethodRHSM,
 			}
 			_, err := imgType.Manifest(bp.Customizations, imgOpts, nil, nil, 0)
 			if imgTypeName == "edge-commit" || imgTypeName == "edge-container" {
@@ -400,6 +401,18 @@ func TestDistro_ManifestError(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+
+			imgOpts = distro.ImageOptions{
+				Size:               imgType.Size(0),
+				SubscriptionMethod: distro.SubscriptionMethodRHUI,
+			}
+			if imgTypeName == "edge-installer" {
+				imgOpts.OSTree.Parent = "c1e3193ffe4edb1f117a2e9980b065ed1fd613a53e0ab16ac276cc6bf285d4a9"
+				_, err = imgType.Manifest(nil, imgOpts, nil, nil, 0)
+			} else {
+				_, err = imgType.Manifest(nil, imgOpts, nil, nil, 0)
+			}
+			assert.EqualError(t, err, fmt.Sprintf("image type %q does not support requested Subscription method: %q", imgTypeName, distro.SubscriptionMethodRHUI))
 		}
 	}
 }

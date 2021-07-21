@@ -181,6 +181,8 @@ type imageType struct {
 	rpmOstree bool
 	// bootable image
 	bootable bool
+
+	allowedSubscriptionMethods []distro.SubscriptionMethod
 }
 
 func (t *imageType) Name() string {
@@ -364,6 +366,19 @@ func (t *imageType) checkOptions(customizations *blueprint.Customizations, optio
 		return fmt.Errorf("kernel boot parameter customizations are not supported for ostree types")
 	}
 
+	if options.SubscriptionMethod != distro.SubscriptionMethodNone {
+		methodOK := false
+		for _, allowedMethod := range t.allowedSubscriptionMethods {
+			if options.SubscriptionMethod == allowedMethod {
+				methodOK = true
+				break
+			}
+		}
+		if !methodOK {
+			return fmt.Errorf("image type %q does not support requested Subscription method: %q", t.name, options.SubscriptionMethod)
+		}
+	}
+
 	return nil
 }
 
@@ -450,6 +465,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		rpmOstree:       true,
 		pipelines:       edgeCommitPipelines,
 		exports:         []string{"commit-archive"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 	edgeOCIImgType := imageType{
 		name:        "edge-container",
@@ -466,6 +484,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		bootISO:         false,
 		pipelines:       edgeContainerPipelines,
 		exports:         []string{containerPkgsKey},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 	edgeInstallerImgType := imageType{
 		name:        "edge-installer",
@@ -482,6 +503,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		bootISO:         true,
 		pipelines:       edgeInstallerPipelines,
 		exports:         []string{"bootiso"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 
 	qcow2ImgType := imageType{
@@ -497,6 +521,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		defaultSize: 10 * GigaByte,
 		pipelines:   qcow2Pipelines,
 		exports:     []string{"qcow2"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 
 	vhdImgType := imageType{
@@ -516,6 +543,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		defaultSize:   4 * GigaByte,
 		pipelines:     vhdPipelines,
 		exports:       []string{"vpc"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 
 	vmdkImgType := imageType{
@@ -530,6 +560,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		defaultSize:   4 * GigaByte,
 		pipelines:     vmdkPipelines,
 		exports:       []string{"vmdk"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 
 	openstackImgType := imageType{
@@ -544,6 +577,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		defaultSize:   4 * GigaByte,
 		pipelines:     openstackPipelines,
 		exports:       []string{"qcow2"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 
 	amiImgType := imageType{
@@ -559,6 +595,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		defaultSize:   6 * GigaByte,
 		pipelines:     amiPipelines,
 		exports:       []string{"image"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 
 	tarImgType := imageType{
@@ -573,6 +612,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		},
 		pipelines: tarPipelines,
 		exports:   []string{"root-tar"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 	tarInstallerImgTypeX86_64 := imageType{
 		name:     "tar-installer",
@@ -590,6 +632,9 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		bootISO:   true,
 		pipelines: tarInstallerPipelines,
 		exports:   []string{"bootiso"},
+		allowedSubscriptionMethods: []distro.SubscriptionMethod{
+			distro.SubscriptionMethodRHSM,
+		},
 	}
 
 	x86_64.addImageTypes(qcow2ImgType, vhdImgType, vmdkImgType, openstackImgType, amiImgType, tarImgType, tarInstallerImgTypeX86_64, edgeCommitImgType, edgeInstallerImgType, edgeOCIImgType)

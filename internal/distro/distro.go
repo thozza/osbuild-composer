@@ -89,11 +89,24 @@ type ImageType interface {
 	Manifest(b *blueprint.Customizations, options ImageOptions, repos []rpmmd.RepoConfig, packageSpecSets map[string][]rpmmd.PackageSpec, seed int64) (Manifest, error)
 }
 
+// SubscriptionMethod represents a type specifying the type of Subscription Method
+type SubscriptionMethod string
+
+const (
+	// No subscription mechanism - e.g. on Fedora / CentOS / ...
+	SubscriptionMethodNone SubscriptionMethod = ""
+	// Red Hat Subscription Management (Subscription Manager)
+	SubscriptionMethodRHSM SubscriptionMethod = "rhsm"
+	// Red Hat Update Infrastructure
+	SubscriptionMethodRHUI SubscriptionMethod = "rhui"
+)
+
 // The ImageOptions specify options for a specific image build
 type ImageOptions struct {
-	OSTree       OSTreeImageOptions
-	Size         uint64
-	Subscription *SubscriptionImageOptions
+	OSTree             OSTreeImageOptions
+	Size               uint64
+	SubscriptionMethod SubscriptionMethod // used only since RHEL-8.5 distro
+	Subscription       *SubscriptionImageOptions
 }
 
 // The OSTreeImageOptions specify ostree-specific image options
@@ -103,7 +116,7 @@ type OSTreeImageOptions struct {
 	URL    string
 }
 
-// The SubscriptionImageOptions specify subscription-specific image options
+// The SubscriptionImageOptions specify RHSM-specific image options
 // ServerUrl denotes the host to register the system with
 // BaseUrl specifies the repository URL for DNF
 type SubscriptionImageOptions struct {

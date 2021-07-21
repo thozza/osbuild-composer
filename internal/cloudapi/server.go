@@ -190,6 +190,7 @@ func (server *Server) Compose(w http.ResponseWriter, r *http.Request) {
 
 		imageOptions := distro.ImageOptions{Size: imageType.Size(0)}
 		if request.Customizations != nil && request.Customizations.Subscription != nil {
+			imageOptions.SubscriptionMethod = distro.SubscriptionMethodRHSM
 			imageOptions.Subscription = &distro.SubscriptionImageOptions{
 				Organization:  request.Customizations.Subscription.Organization,
 				ActivationKey: request.Customizations.Subscription.ActivationKey,

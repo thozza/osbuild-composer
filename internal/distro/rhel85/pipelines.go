@@ -327,7 +327,7 @@ func osPipeline(repos []rpmmd.RepoConfig, packages []rpmmd.PackageSpec, bpPackag
 		},
 	}))
 
-	if options.Subscription != nil {
+	if options.SubscriptionMethod == distro.SubscriptionMethodRHSM && options.Subscription != nil {
 		commands := []string{
 			fmt.Sprintf("/usr/sbin/subscription-manager register --org=%d --activationkey=%s --serverurl %s --baseurl %s", options.Subscription.Organization, options.Subscription.ActivationKey, options.Subscription.ServerUrl, options.Subscription.BaseUrl),
 		}
@@ -409,7 +409,7 @@ func ostreeTreePipeline(repos []rpmmd.RepoConfig, packages []rpmmd.PackageSpec, 
 		},
 	}))
 
-	if options.Subscription != nil {
+	if options.SubscriptionMethod == distro.SubscriptionMethodRHSM && options.Subscription != nil {
 		commands := []string{
 			fmt.Sprintf("/usr/sbin/subscription-manager register --org=%d --activationkey=%s --serverurl %s --baseurl %s", options.Subscription.Organization, options.Subscription.ActivationKey, options.Subscription.ServerUrl, options.Subscription.BaseUrl),
 		}
