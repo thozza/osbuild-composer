@@ -32,6 +32,13 @@ func ppc64leBuildPackageSet() rpmmd.PackageSet {
 	}
 }
 
+// common ec2 image build package set
+func ec2BuildPackageSet() rpmmd.PackageSet {
+	return rpmmd.PackageSet{
+		Include: []string{"python3-pyyaml"},
+	}
+}
+
 // common edge image build package set
 func edgeBuildPackageSet() rpmmd.PackageSet {
 	return rpmmd.PackageSet{
@@ -171,17 +178,14 @@ func openstackCommonPackageSet() rpmmd.PackageSet {
 
 }
 
-func amiCommonPackageSet() rpmmd.PackageSet {
+func ec2CommonPackageSet() rpmmd.PackageSet {
 	return rpmmd.PackageSet{
 		Include: []string{
-			"@core", "cloud-init", "cloud-utils-growpart", "yum-utils",
-			"dracut-config-generic", "dracut-norescue", "gdisk", "grub2",
-			"insights-client", "NetworkManager", "NetworkManager-cloud-setup",
-			"redhat-release", "redhat-release-eula", "rsync", "tar",
-
-			// TODO this doesn't exist in BaseOS or AppStream
-			// "rh-amazon-rhui-client",
-
+			"@core", "chrony", "cloud-init", "cloud-utils-growpart",
+			"yum-utils", "dracut-config-generic", "dracut-norescue", "gdisk",
+			"grub2", "insights-client", "NetworkManager",
+			"NetworkManager-cloud-setup", "redhat-release",
+			"redhat-release-eula", "rsync", "tar",
 		},
 		Exclude: []string{
 			"aic94xx-firmware", "alsa-firmware", "alsa-lib",

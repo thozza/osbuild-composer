@@ -46,6 +46,15 @@ const (
 	blueprintPkgsKey = "blueprint"
 )
 
+const (
+	// architecture names
+
+	x86_64ArchName  = "x86_64"
+	aarch64ArchName = "aarch64"
+	ppc64leArchName = "ppc64le"
+	s390xArchName   = "s390x"
+)
+
 type distribution struct {
 	name             string
 	modulePlatformID string
@@ -395,7 +404,7 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 
 	// Architecture definitions
 	x86_64 := architecture{
-		name:   "x86_64",
+		name:   x86_64ArchName,
 		distro: rd,
 		packageSets: map[string]rpmmd.PackageSet{
 			buildPkgsKey: x8664BuildPackageSet(),
@@ -407,7 +416,7 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 	}
 
 	aarch64 := architecture{
-		name:   "aarch64",
+		name:   aarch64ArchName,
 		distro: rd,
 		packageSets: map[string]rpmmd.PackageSet{
 			bootPkgsKey: aarch64BootPackageSet(),
@@ -418,7 +427,7 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 
 	ppc64le := architecture{
 		distro: rd,
-		name:   "ppc64le",
+		name:   ppc64leArchName,
 		packageSets: map[string]rpmmd.PackageSet{
 			bootPkgsKey:  ppc64leBootPackageSet(),
 			buildPkgsKey: ppc64leBuildPackageSet(),
@@ -428,7 +437,7 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 	}
 	s390x := architecture{
 		distro: rd,
-		name:   "s390x",
+		name:   s390xArchName,
 		packageSets: map[string]rpmmd.PackageSet{
 			bootPkgsKey: s390xBootPackageSet(),
 		},
@@ -557,18 +566,35 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		exports:       []string{"qcow2"},
 	}
 
-	amiImgType := imageType{
+	amiImgTypeX86_64 := imageType{
 		name:     "ami",
 		filename: "image.raw",
 		mimeType: "application/octet-stream",
 		packageSets: map[string]rpmmd.PackageSet{
-			osPkgsKey: amiCommonPackageSet(),
+			buildPkgsKey: ec2BuildPackageSet(),
+			osPkgsKey:    ec2CommonPackageSet(),
 		},
 		defaultTarget: "multi-user.target",
 		kernelOptions: "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 crashkernel=auto",
 		bootable:      true,
-		defaultSize:   6 * GigaByte,
-		pipelines:     amiPipelines,
+		defaultSize:   10 * GigaByte,
+		pipelines:     ec2Pipelines,
+		exports:       []string{"image"},
+	}
+
+	amiImgTypeAarch64 := imageType{
+		name:     "ami",
+		filename: "image.raw",
+		mimeType: "application/octet-stream",
+		packageSets: map[string]rpmmd.PackageSet{
+			buildPkgsKey: ec2BuildPackageSet(),
+			osPkgsKey:    ec2CommonPackageSet(),
+		},
+		defaultTarget: "multi-user.target",
+		kernelOptions: "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 iommu.strict=0 crashkernel=auto",
+		bootable:      true,
+		defaultSize:   10 * GigaByte,
+		pipelines:     ec2Pipelines,
 		exports:       []string{"image"},
 	}
 
@@ -603,8 +629,8 @@ func newDistro(name, modulePlatformID, ostreeRef string) distro.Distro {
 		exports:   []string{"bootiso"},
 	}
 
-	x86_64.addImageTypes(qcow2ImgType, vhdImgType, vmdkImgType, openstackImgType, amiImgType, tarImgType, tarInstallerImgTypeX86_64, edgeCommitImgType, edgeInstallerImgType, edgeOCIImgType)
-	aarch64.addImageTypes(qcow2ImgType, openstackImgType, amiImgType, tarImgType, edgeCommitImgType, edgeOCIImgType)
+	x86_64.addImageTypes(qcow2ImgType, vhdImgType, vmdkImgType, openstackImgType, amiImgTypeX86_64, tarImgType, tarInstallerImgTypeX86_64, edgeCommitImgType, edgeInstallerImgType, edgeOCIImgType)
+	aarch64.addImageTypes(qcow2ImgType, openstackImgType, amiImgTypeAarch64, tarImgType, edgeCommitImgType, edgeOCIImgType)
 	ppc64le.addImageTypes(qcow2ImgType, tarImgType)
 	s390x.addImageTypes(qcow2ImgType, tarImgType)
 
