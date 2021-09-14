@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/cloudbuild v0.1.0
 	cloud.google.com/go/storage v1.16.1
 	github.com/Azure/azure-pipeline-go v0.2.3
-	github.com/Azure/azure-sdk-for-go v57.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v57.2.0+incompatible
 	github.com/Azure/azure-storage-blob-go v0.14.0
 	github.com/Azure/go-autorest/autorest v0.11.20
 	github.com/Azure/go-autorest/autorest/adal v0.9.15 // indirect
@@ -36,10 +36,11 @@ require (
 	github.com/kolo/xmlrpc v0.0.0-20201022064351-38db28db192b
 	github.com/labstack/echo/v4 v4.5.0
 	github.com/mattn/go-isatty v0.0.13 // indirect
-	github.com/openshift-online/ocm-sdk-go v0.1.204
+	github.com/openshift-online/ocm-sdk-go v0.1.208
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/segmentio/ksuid v1.0.4
 	github.com/stretchr/testify v1.7.0
 	github.com/ubccr/kerby v0.0.0-20170626144437-201a958fc453
 	github.com/vmware/govmomi v0.26.1

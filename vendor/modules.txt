@@ -19,7 +19,7 @@ cloud.google.com/go/storage/internal/apiv2
 # github.com/Azure/azure-pipeline-go v0.2.3
 ## explicit
 github.com/Azure/azure-pipeline-go/pipeline
-# github.com/Azure/azure-sdk-for-go v57.1.0+incompatible
+# github.com/Azure/azure-sdk-for-go v57.2.0+incompatible
 ## explicit
 github.com/Azure/azure-sdk-for-go/profiles/2019-03-01/compute/mgmt/compute
 github.com/Azure/azure-sdk-for-go/profiles/2019-03-01/resources/mgmt/resources
@@ -273,7 +273,7 @@ github.com/mitchellh/go-homedir
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
-# github.com/openshift-online/ocm-sdk-go v0.1.204
+# github.com/openshift-online/ocm-sdk-go v0.1.208
 ## explicit
 github.com/openshift-online/ocm-sdk-go/authentication
 github.com/openshift-online/ocm-sdk-go/errors
@@ -302,6 +302,9 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/segmentio/ksuid v1.0.4
+## explicit
+github.com/segmentio/ksuid
 # github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
