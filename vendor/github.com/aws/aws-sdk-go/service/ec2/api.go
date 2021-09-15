@@ -3572,9 +3572,9 @@ func (c *EC2) CopyImageRequest(input *CopyImageInput) (req *request.Request, out
 // CopyImage API operation for Amazon Elastic Compute Cloud.
 //
 // Initiates the copy of an AMI. You can copy an AMI from one Region to another,
-// or from a Region to an AWS Outpost. You can't copy an AMI from an Outpost
-// to a Region, from one Outpost to another, or within the same Outpost. To
-// copy an AMI to another partition, see CreateStoreImageTask (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateStoreImageTask.html).
+// or from a Region to an Outpost. You can't copy an AMI from an Outpost to
+// a Region, from one Outpost to another, or within the same Outpost. To copy
+// an AMI to another partition, see CreateStoreImageTask (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateStoreImageTask.html).
 //
 // To copy an AMI from one Region to another, specify the source Region using
 // the SourceRegion parameter, and specify the destination Region using its
@@ -4802,10 +4802,11 @@ func (c *EC2) CreateImageRequest(input *CreateImageInput) (req *request.Request,
 // Creates an Amazon EBS-backed AMI from an Amazon EBS-backed instance that
 // is either running or stopped.
 //
-// If you customized your instance with instance store volumes or EBS volumes
-// in addition to the root device volume, the new AMI contains block device
-// mapping information for those volumes. When you launch an instance from this
-// new AMI, the instance automatically launches with those additional volumes.
+// If you customized your instance with instance store volumes or Amazon EBS
+// volumes in addition to the root device volume, the new AMI contains block
+// device mapping information for those volumes. When you launch an instance
+// from this new AMI, the instance automatically launches with those additional
+// volumes.
 //
 // For more information, see Creating Amazon EBS-Backed Linux AMIs (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html)
 // in the Amazon Elastic Compute Cloud User Guide.
@@ -5532,9 +5533,6 @@ func (c *EC2) CreateManagedPrefixListRequest(input *CreateManagedPrefixListInput
 //
 // Creates a managed prefix list. You can specify one or more entries for the
 // prefix list. Each entry consists of a CIDR block and an optional description.
-//
-// You must specify the maximum number of entries for the prefix list. The maximum
-// number of entries cannot be changed later.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -6361,14 +6359,14 @@ func (c *EC2) CreateRestoreImageTaskRequest(input *CreateRestoreImageTaskInput) 
 
 // CreateRestoreImageTask API operation for Amazon Elastic Compute Cloud.
 //
-// Starts a task that restores an AMI from an S3 object that was previously
+// Starts a task that restores an AMI from an Amazon S3 object that was previously
 // created by using CreateStoreImageTask (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateStoreImageTask.html).
 //
 // To use this API, you must have the required permissions. For more information,
-// see Permissions for storing and restoring AMIs using S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html#ami-s3-permissions)
+// see Permissions for storing and restoring AMIs using Amazon S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html#ami-s3-permissions)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
-// For more information, see Store and restore an AMI using S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html)
+// For more information, see Store and restore an AMI using Amazon S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -6985,13 +6983,13 @@ func (c *EC2) CreateStoreImageTaskRequest(input *CreateStoreImageTaskInput) (req
 
 // CreateStoreImageTask API operation for Amazon Elastic Compute Cloud.
 //
-// Stores an AMI as a single object in an S3 bucket.
+// Stores an AMI as a single object in an Amazon S3 bucket.
 //
 // To use this API, you must have the required permissions. For more information,
-// see Permissions for storing and restoring AMIs using S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html#ami-s3-permissions)
+// see Permissions for storing and restoring AMIs using Amazon S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html#ami-s3-permissions)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
-// For more information, see Store and restore an AMI using S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html)
+// For more information, see Store and restore an AMI using Amazon S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -18016,8 +18014,8 @@ func (c *EC2) DescribeImagesRequest(input *DescribeImagesInput) (req *request.Re
 // all of the images available to you.
 //
 // The images available to you include public images, private images that you
-// own, and private images owned by other AWS accounts for which you have explicit
-// launch permissions.
+// own, and private images owned by other Amazon Web Services accounts for which
+// you have explicit launch permissions.
 //
 // Recently deregistered images appear in the returned results for a short interval
 // and then return empty results. After all instances that reference a deregistered
@@ -24905,10 +24903,10 @@ func (c *EC2) DescribeStoreImageTasksRequest(input *DescribeStoreImageTasksInput
 // the past 31 days can be viewed.
 //
 // To use this API, you must have the required permissions. For more information,
-// see Permissions for storing and restoring AMIs using S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html#ami-s3-permissions)
+// see Permissions for storing and restoring AMIs using Amazon S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html#ami-s3-permissions)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
-// For more information, see Store and restore an AMI using S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html)
+// For more information, see Store and restore an AMI using Amazon S3 (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-store-restore.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -35603,11 +35601,10 @@ func (c *EC2) ModifyImageAttributeRequest(input *ModifyImageAttributeInput) (req
 //
 // Modifies the specified attribute of the specified AMI. You can specify only
 // one attribute at a time. You can use the Attribute parameter to specify the
-// attribute or one of the following parameters: Description, LaunchPermission,
-// or ProductCode.
+// attribute or one of the following parameters: Description or LaunchPermission.
 //
-// AWS Marketplace product codes cannot be modified. Images with an AWS Marketplace
-// product code cannot be made public.
+// Images with an Amazon Web Services Marketplace product code cannot be made
+// public.
 //
 // To enable the SriovNetSupport enhanced networking attribute of an image,
 // enable SriovNetSupport on an instance and create an AMI from the instance.
@@ -39077,20 +39074,20 @@ func (c *EC2) RegisterImageRequest(input *RegisterImageInput) (req *request.Requ
 // is enabled, the root volume of an instance launched from the AMI is encrypted.
 //
 // For more information, see Create a Linux AMI from a snapshot (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html#creating-launching-ami-from-snapshot)
-// and Use encryption with EBS-backed AMIs (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIEncryption.html)
+// and Use encryption with Amazon EBS-backed AMIs (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIEncryption.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
-// AWS Marketplace product codes
+// Amazon Web Services Marketplace product codes
 //
-// If any snapshots have AWS Marketplace product codes, they are copied to the
-// new AMI.
+// If any snapshots have Amazon Web Services Marketplace product codes, they
+// are copied to the new AMI.
 //
 // Windows and some Linux distributions, such as Red Hat Enterprise Linux (RHEL)
-// and SUSE Linux Enterprise Server (SLES), use the EC2 billing product code
-// associated with an AMI to verify the subscription status for package updates.
-// To create a new AMI for operating systems that require a billing product
-// code, instead of registering the AMI, do the following to preserve the billing
-// product code association:
+// and SUSE Linux Enterprise Server (SLES), use the Amazon EC2 billing product
+// code associated with an AMI to verify the subscription status for package
+// updates. To create a new AMI for operating systems that require a billing
+// product code, instead of registering the AMI, do the following to preserve
+// the billing product code association:
 //
 // Launch an instance from an existing AMI with that billing product code.
 //
@@ -39104,7 +39101,7 @@ func (c *EC2) RegisterImageRequest(input *RegisterImageInput) (req *request.Requ
 // a Reserved Instance without the matching billing product code, the Reserved
 // Instance will not be applied to the On-Demand Instance. For information about
 // how to obtain the platform details and billing information of an AMI, see
-// Obtaining billing information (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-billing-info.html)
+// Understanding AMI billing (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-billing-info.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -40938,8 +40935,6 @@ func (c *EC2) ResetImageAttributeRequest(input *ResetImageAttributeInput) (req *
 //
 // Resets an attribute of an AMI to its default value.
 //
-// The productCodes attribute can't be reset.
-//
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
@@ -42320,6 +42315,11 @@ func (c *EC2) StartInstancesRequest(input *StartInstancesInput) (req *request.Re
 //
 // Performing this operation on an instance that uses an instance store as its
 // root device returns an error.
+//
+// If you attempt to start a T3 instance with host tenancy and the unlimted
+// CPU credit option, the request fails. The unlimited CPU credit option is
+// not supported on Dedicated Hosts. Before you start the instance, either change
+// its CPU credit option to standard, or change its tenancy to default or dedicated.
 //
 // For more information, see Stopping instances (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Stop_Start.html)
 // in the Amazon EC2 User Guide.
@@ -51471,12 +51471,13 @@ type CopyImageInput struct {
 	Description *string `type:"string"`
 
 	// The Amazon Resource Name (ARN) of the Outpost to which to copy the AMI. Only
-	// specify this parameter when copying an AMI from an AWS Region to an Outpost.
-	// The AMI must be in the Region of the destination Outpost. You cannot copy
-	// an AMI from an Outpost to a Region, from one Outpost to another, or within
-	// the same Outpost.
+	// specify this parameter when copying an AMI from an Amazon Web Services Region
+	// to an Outpost. The AMI must be in the Region of the destination Outpost.
+	// You cannot copy an AMI from an Outpost to a Region, from one Outpost to another,
+	// or within the same Outpost.
 	//
-	// For more information, see Copying AMIs from an AWS Region to an Outpost (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/snapshots-outposts.html#copy-amis)
+	// For more information, see Copying AMIs from an Amazon Web Services Region
+	// to an Outpost (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/snapshots-outposts.html#copy-amis)
 	// in the Amazon Elastic Compute Cloud User Guide.
 	DestinationOutpostArn *string `type:"string"`
 
@@ -51488,19 +51489,19 @@ type CopyImageInput struct {
 
 	// Specifies whether the destination snapshots of the copied image should be
 	// encrypted. You can encrypt a copy of an unencrypted snapshot, but you cannot
-	// create an unencrypted copy of an encrypted snapshot. The default CMK for
-	// EBS is used unless you specify a non-default AWS Key Management Service (AWS
-	// KMS) CMK using KmsKeyId. For more information, see Amazon EBS Encryption
+	// create an unencrypted copy of an encrypted snapshot. The default KMS key
+	// for Amazon EBS is used unless you specify a non-default Key Management Service
+	// (KMS) KMS key using KmsKeyId. For more information, see Amazon EBS Encryption
 	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html)
 	// in the Amazon Elastic Compute Cloud User Guide.
 	Encrypted *bool `locationName:"encrypted" type:"boolean"`
 
-	// The identifier of the symmetric AWS Key Management Service (AWS KMS) customer
-	// master key (CMK) to use when creating encrypted volumes. If this parameter
-	// is not specified, your AWS managed CMK for EBS is used. If you specify a
-	// CMK, you must also set the encrypted state to true.
+	// The identifier of the symmetric Key Management Service (KMS) KMS key to use
+	// when creating encrypted volumes. If this parameter is not specified, your
+	// Amazon Web Services managed KMS key for Amazon EBS is used. If you specify
+	// a KMS key, you must also set the encrypted state to true.
 	//
-	// You can specify a CMK using any of the following:
+	// You can specify a KMS key using any of the following:
 	//
 	//    * Key ID. For example, 1234abcd-12ab-34cd-56ef-1234567890ab.
 	//
@@ -51510,12 +51511,13 @@ type CopyImageInput struct {
 	//
 	//    * Alias ARN. For example, arn:aws:kms:us-east-1:012345678910:alias/ExampleAlias.
 	//
-	// AWS authenticates the CMK asynchronously. Therefore, if you specify an identifier
-	// that is not valid, the action can appear to complete, but eventually fails.
+	// Amazon Web Services authenticates the KMS key asynchronously. Therefore,
+	// if you specify an identifier that is not valid, the action can appear to
+	// complete, but eventually fails.
 	//
-	// The specified CMK must exist in the destination Region.
+	// The specified KMS key must exist in the destination Region.
 	//
-	// Amazon EBS does not support asymmetric CMKs.
+	// Amazon EBS does not support asymmetric KMS keys.
 	KmsKeyId *string `locationName:"kmsKeyId" type:"string"`
 
 	// The name of the new AMI in the destination Region.
@@ -53874,8 +53876,10 @@ type CreateImageInput struct {
 
 	// By default, Amazon EC2 attempts to shut down and reboot the instance before
 	// creating the image. If the No Reboot option is set, Amazon EC2 doesn't shut
-	// down the instance before creating the image. When this option is used, file
-	// system integrity on the created image can't be guaranteed.
+	// down the instance before creating the image. Without a reboot, the AMI will
+	// be crash consistent (all the volumes are snapshotted at the same time), but
+	// not application consistent (all the operating system buffers are not flushed
+	// to disk before the snapshots are created).
 	NoReboot *bool `locationName:"noReboot" type:"boolean"`
 
 	// The tags to apply to the AMI and snapshots on creation. You can tag the AMI,
@@ -53884,7 +53888,7 @@ type CreateImageInput struct {
 	//    * To tag the AMI, the value for ResourceType must be image.
 	//
 	//    * To tag the snapshots that are created of the root volume and of other
-	//    EBS volumes that are attached to the instance, the value for ResourceType
+	//    Amazon EBS volumes that are attached to the instance, the value for ResourceType
 	//    must be snapshot. The same tag is applied to all of the snapshots that
 	//    are created.
 	//
@@ -56201,7 +56205,7 @@ func (s *CreateReservedInstancesListingOutput) SetReservedInstancesListings(v []
 type CreateRestoreImageTaskInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the S3 bucket that contains the stored AMI object.
+	// The name of the Amazon S3 bucket that contains the stored AMI object.
 	//
 	// Bucket is a required field
 	Bucket *string `type:"string" required:"true"`
@@ -57026,9 +57030,9 @@ func (s *CreateSpotDatafeedSubscriptionOutput) SetSpotDatafeedSubscription(v *Sp
 type CreateStoreImageTaskInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the S3 bucket in which the AMI object will be stored. The bucket
-	// must be in the Region in which the request is being made. The AMI object
-	// appears in the bucket only after the upload task has completed.
+	// The name of the Amazon S3 bucket in which the AMI object will be stored.
+	// The bucket must be in the Region in which the request is being made. The
+	// AMI object appears in the bucket only after the upload task has completed.
 	//
 	// Bucket is a required field
 	Bucket *string `type:"string" required:"true"`
@@ -57044,7 +57048,8 @@ type CreateStoreImageTaskInput struct {
 	// ImageId is a required field
 	ImageId *string `type:"string" required:"true"`
 
-	// The tags to apply to the AMI object that will be stored in the S3 bucket.
+	// The tags to apply to the AMI object that will be stored in the Amazon S3
+	// bucket.
 	S3ObjectTags []*S3ObjectTag `locationName:"S3ObjectTag" locationNameList:"item" type:"list"`
 }
 
@@ -69650,8 +69655,9 @@ type DescribeImagesInput struct {
 	// it is UnauthorizedOperation.
 	DryRun *bool `locationName:"dryRun" type:"boolean"`
 
-	// Scopes the images by users with explicit launch permissions. Specify an AWS
-	// account ID, self (the sender of the request), or all (public AMIs).
+	// Scopes the images by users with explicit launch permissions. Specify an Amazon
+	// Web Services account ID, self (the sender of the request), or all (public
+	// AMIs).
 	ExecutableUsers []*string `locationName:"ExecutableBy" locationNameList:"ExecutableBy" type:"list"`
 
 	// The filters.
@@ -69665,16 +69671,16 @@ type DescribeImagesInput struct {
 	//    block device mapping (for example, /dev/sdh or xvdh).
 	//
 	//    * block-device-mapping.snapshot-id - The ID of the snapshot used for the
-	//    EBS volume.
+	//    Amazon EBS volume.
 	//
-	//    * block-device-mapping.volume-size - The volume size of the EBS volume,
-	//    in GiB.
+	//    * block-device-mapping.volume-size - The volume size of the Amazon EBS
+	//    volume, in GiB.
 	//
-	//    * block-device-mapping.volume-type - The volume type of the EBS volume
-	//    (gp2 | io1 | io2 | st1 | sc1 | standard).
+	//    * block-device-mapping.volume-type - The volume type of the Amazon EBS
+	//    volume (io1 | io2 | gp2 | gp3 | sc1 | st1 | standard).
 	//
 	//    * block-device-mapping.encrypted - A Boolean that indicates whether the
-	//    EBS volume is encrypted.
+	//    Amazon EBS volume is encrypted.
 	//
 	//    * description - The description of the image (provided during image creation).
 	//
@@ -69696,18 +69702,18 @@ type DescribeImagesInput struct {
 	//    * name - The name of the AMI (provided during image creation).
 	//
 	//    * owner-alias - The owner alias (amazon | aws-marketplace). The valid
-	//    aliases are defined in an Amazon-maintained list. This is not the AWS
-	//    account alias that can be set using the IAM console. We recommend that
-	//    you use the Owner request parameter instead of this filter.
+	//    aliases are defined in an Amazon-maintained list. This is not the Amazon
+	//    Web Services account alias that can be set using the IAM console. We recommend
+	//    that you use the Owner request parameter instead of this filter.
 	//
-	//    * owner-id - The AWS account ID of the owner. We recommend that you use
-	//    the Owner request parameter instead of this filter.
+	//    * owner-id - The Amazon Web Services account ID of the owner. We recommend
+	//    that you use the Owner request parameter instead of this filter.
 	//
 	//    * platform - The platform. To only list Windows-based AMIs, use windows.
 	//
 	//    * product-code - The product code.
 	//
-	//    * product-code.type - The type of the product code (devpay | marketplace).
+	//    * product-code.type - The type of the product code (marketplace).
 	//
 	//    * ramdisk-id - The RAM disk ID.
 	//
@@ -69752,9 +69758,9 @@ type DescribeImagesInput struct {
 	IncludeDeprecated *bool `type:"boolean"`
 
 	// Scopes the results to images with the specified owners. You can specify a
-	// combination of AWS account IDs, self, amazon, and aws-marketplace. If you
-	// omit this parameter, the results include all images for which you have launch
-	// permissions, regardless of ownership.
+	// combination of Amazon Web Services account IDs, self, amazon, and aws-marketplace.
+	// If you omit this parameter, the results include all images for which you
+	// have launch permissions, regardless of ownership.
 	Owners []*string `locationName:"Owner" locationNameList:"Owner" type:"list"`
 }
 
@@ -70925,7 +70931,8 @@ type DescribeInstanceTypesInput struct {
 	//    (ENA) is supported or required (required | supported | unsupported).
 	//
 	//    * network-info.encryption-in-transit-supported - Indicates whether the
-	//    instance type automatically encrypts in-transit traffic between instances.
+	//    instance type automatically encrypts in-transit traffic between instances
+	//    (true | false).
 	//
 	//    * network-info.ipv4-addresses-per-interface - The maximum number of private
 	//    IPv4 addresses per network interface.
@@ -85314,9 +85321,6 @@ type EventInformation struct {
 	//
 	//    * modify_succeeded - The EC2 Fleet or Spot Fleet request was modified.
 	//
-	//    * price_update - The price for a launch configuration was adjusted because
-	//    it was too high. This change is permanent.
-	//
 	//    * submitted - The EC2 Fleet or Spot Fleet request is being evaluated and
 	//    Amazon EC2 is preparing to launch the target number of Spot Instances.
 	//
@@ -91671,8 +91675,8 @@ type Image struct {
 	// The location of the AMI.
 	ImageLocation *string `locationName:"imageLocation" type:"string"`
 
-	// The AWS account alias (for example, amazon, self) or the AWS account ID of
-	// the AMI owner.
+	// The Amazon Web Services account alias (for example, amazon, self) or the
+	// Amazon Web Services account ID of the AMI owner.
 	ImageOwnerAlias *string `locationName:"imageOwnerAlias" type:"string"`
 
 	// The type of image.
@@ -91685,14 +91689,14 @@ type Image struct {
 	// The name of the AMI that was provided during image creation.
 	Name *string `locationName:"name" type:"string"`
 
-	// The AWS account ID of the image owner.
+	// The ID of the Amazon Web Services account that owns the image.
 	OwnerId *string `locationName:"imageOwnerId" type:"string"`
 
 	// This value is set to windows for Windows AMIs; otherwise, it is blank.
 	Platform *string `locationName:"platform" type:"string" enum:"PlatformValues"`
 
 	// The platform details associated with the billing code of the AMI. For more
-	// information, see Obtaining Billing Information (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-billing-info.html)
+	// information, see Understanding AMI billing (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-billing-info.html)
 	// in the Amazon Elastic Compute Cloud User Guide.
 	PlatformDetails *string `locationName:"platformDetails" type:"string"`
 
@@ -91711,8 +91715,8 @@ type Image struct {
 	// The device name of the root device volume (for example, /dev/sda1).
 	RootDeviceName *string `locationName:"rootDeviceName" type:"string"`
 
-	// The type of root device used by the AMI. The AMI can use an EBS volume or
-	// an instance store volume.
+	// The type of root device used by the AMI. The AMI can use an Amazon EBS volume
+	// or an instance store volume.
 	RootDeviceType *string `locationName:"rootDeviceType" type:"string" enum:"DeviceType"`
 
 	// Specifies whether enhanced networking with the Intel 82599 Virtual Function
@@ -91731,10 +91735,12 @@ type Image struct {
 
 	// The operation of the Amazon EC2 instance and the billing code that is associated
 	// with the AMI. usageOperation corresponds to the lineitem/Operation (https://docs.aws.amazon.com/cur/latest/userguide/Lineitem-columns.html#Lineitem-details-O-Operation)
-	// column on your AWS Cost and Usage Report and in the AWS Price List API (https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/price-changes.html).
-	// For the list of UsageOperation codes, see Platform Details and Usage Operation
-	// Billing Codes (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-billing-info.html#billing-info)
-	// in the Amazon Elastic Compute Cloud User Guide.
+	// column on your Amazon Web Services Cost and Usage Report and in the Amazon
+	// Web Services Price List API (https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/price-changes.html).
+	// You can view these fields on the Instances or AMIs pages in the Amazon EC2
+	// console, or in the responses that are returned by the DescribeImages (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeImages.html)
+	// command in the Amazon EC2 API, or the describe-images (https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html)
+	// command in the CLI.
 	UsageOperation *string `locationName:"usageOperation" type:"string"`
 
 	// The type of virtualization of the AMI.
@@ -94314,6 +94320,8 @@ type InstanceCreditSpecificationRequest struct {
 
 	// The credit option for CPU usage of the instance. Valid values are standard
 	// and unlimited.
+	//
+	// T3 instances with host tenancy do not support the unlimited CPU credit option.
 	CpuCredits *string `type:"string"`
 
 	// The ID of the instance.
@@ -97095,7 +97103,7 @@ type LaunchPermission struct {
 	// The name of the group.
 	Group *string `locationName:"group" type:"string" enum:"PermissionGroup"`
 
-	// The AWS account ID.
+	// The Amazon Web Services account ID.
 	//
 	// Constraints: Up to 10 000 account IDs can be specified in a single request.
 	UserId *string `locationName:"userId" type:"string"`
@@ -97127,11 +97135,12 @@ func (s *LaunchPermission) SetUserId(v string) *LaunchPermission {
 type LaunchPermissionModifications struct {
 	_ struct{} `type:"structure"`
 
-	// The AWS account ID to add to the list of launch permissions for the AMI.
+	// The Amazon Web Services account ID to add to the list of launch permissions
+	// for the AMI.
 	Add []*LaunchPermission `locationNameList:"item" type:"list"`
 
-	// The AWS account ID to remove from the list of launch permissions for the
-	// AMI.
+	// The Amazon Web Services account ID to remove from the list of launch permissions
+	// for the AMI.
 	Remove []*LaunchPermission `locationNameList:"item" type:"list"`
 }
 
@@ -100303,7 +100312,7 @@ type ManagedPrefixList struct {
 	// The name of the prefix list.
 	PrefixListName *string `locationName:"prefixListName" type:"string"`
 
-	// The state of the prefix list.
+	// The current state of the prefix list.
 	State *string `locationName:"state" type:"string" enum:"PrefixListState"`
 
 	// The state message.
@@ -100623,9 +100632,8 @@ type ModifyCapacityReservationInput struct {
 	//    date and time. You must provide an EndDate value if EndDateType is limited.
 	EndDateType *string `type:"string" enum:"EndDateType"`
 
-	// The number of instances for which to reserve capacity.
-	//
-	// Valid range: 1 - 1000
+	// The number of instances for which to reserve capacity. The number of instances
+	// can't be increased or decreased by more than 1000 in a single request.
 	InstanceCount *int64 `type:"integer"`
 }
 
@@ -101640,8 +101648,8 @@ func (s ModifyIdentityIdFormatOutput) GoString() string {
 type ModifyImageAttributeInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the attribute to modify. The valid values are description, launchPermission,
-	// and productCodes.
+	// The name of the attribute to modify. The valid values are description and
+	// launchPermission.
 	Attribute *string `type:"string"`
 
 	// A new description for the AMI.
@@ -101665,20 +101673,19 @@ type ModifyImageAttributeInput struct {
 	// is launchPermission.
 	OperationType *string `type:"string" enum:"OperationType"`
 
-	// The DevPay product codes. After you add a product code to an AMI, it can't
-	// be removed.
+	// Not supported.
 	ProductCodes []*string `locationName:"ProductCode" locationNameList:"ProductCode" type:"list"`
 
 	// The user groups. This parameter can be used only when the Attribute parameter
 	// is launchPermission.
 	UserGroups []*string `locationName:"UserGroup" locationNameList:"UserGroup" type:"list"`
 
-	// The AWS account IDs. This parameter can be used only when the Attribute parameter
-	// is launchPermission.
+	// The Amazon Web Services account IDs. This parameter can be used only when
+	// the Attribute parameter is launchPermission.
 	UserIds []*string `locationName:"UserId" locationNameList:"UserId" type:"list"`
 
 	// The value of the attribute being modified. This parameter can be used only
-	// when the Attribute parameter is description or productCodes.
+	// when the Attribute parameter is description.
 	Value *string `type:"string"`
 }
 
@@ -102583,6 +102590,10 @@ type ModifyInstancePlacementInput struct {
 	PartitionNumber *int64 `type:"integer"`
 
 	// The tenancy for the instance.
+	//
+	// For T3 instances, you can't change the tenancy from dedicated to host, or
+	// from host to dedicated. Attempting to make one of these unsupported tenancy
+	// changes results in the InvalidTenancy error code.
 	Tenancy *string `locationName:"tenancy" type:"string" enum:"HostTenancy"`
 }
 
@@ -102795,6 +102806,10 @@ type ModifyManagedPrefixListInput struct {
 	// The maximum number of entries for the prefix list. You cannot modify the
 	// entries of a prefix list and modify the size of a prefix list at the same
 	// time.
+	//
+	// If any of the resources that reference the prefix list cannot support the
+	// new maximum size, the modify operation fails. Check the state message for
+	// the IDs of the first ten resources that do not support the new maximum size.
 	MaxEntries *int64 `type:"integer"`
 
 	// The ID of the prefix list.
@@ -108556,6 +108571,9 @@ type Placement struct {
 	// command.
 	//
 	// This parameter is not supported by CreateFleet (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateFleet).
+	//
+	// T3 instances that use the unlimited CPU credit option do not support host
+	// tenancy.
 	Tenancy *string `locationName:"tenancy" type:"string" enum:"Tenancy"`
 }
 
@@ -110410,14 +110428,14 @@ type RegisterImageInput struct {
 	Architecture *string `locationName:"architecture" type:"string" enum:"ArchitectureValues"`
 
 	// The billing product codes. Your account must be authorized to specify billing
-	// product codes. Otherwise, you can use the AWS Marketplace to bill for the
-	// use of an AMI.
+	// product codes. Otherwise, you can use the Amazon Web Services Marketplace
+	// to bill for the use of an AMI.
 	BillingProducts []*string `locationName:"BillingProduct" locationNameList:"item" type:"list"`
 
 	// The block device mapping entries.
 	//
-	// If you specify an EBS volume using the ID of an EBS snapshot, you can't specify
-	// the encryption state of the volume.
+	// If you specify an Amazon EBS volume using the ID of an Amazon EBS snapshot,
+	// you can't specify the encryption state of the volume.
 	//
 	// If you create an AMI on an Outpost, then all backing snapshots must be on
 	// the same Outpost or in the Region of that Outpost. AMIs on an Outpost that
@@ -115891,6 +115909,8 @@ type RunInstancesInput struct {
 	// in the Amazon EC2 User Guide.
 	//
 	// Default: standard (T2 instances) or unlimited (T3/T3a instances)
+	//
+	// For T3 instances with host tenancy, only standard is supported.
 	CreditSpecification *CreditSpecificationRequest `type:"structure"`
 
 	// If you set this parameter to true, you can't terminate the instance using
@@ -116544,8 +116564,8 @@ func (s *RunScheduledInstancesOutput) SetInstanceIdSet(v []*string) *RunSchedule
 	return s
 }
 
-// The tags to apply to the AMI object that will be stored in the S3 bucket.
-// For more information, see Categorizing your storage using tags (https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-tagging.html)
+// The tags to apply to the AMI object that will be stored in the Amazon S3
+// bucket. For more information, see Categorizing your storage using tags (https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-tagging.html)
 // in the Amazon Simple Storage Service User Guide.
 type S3ObjectTag struct {
 	_ struct{} `type:"structure"`
@@ -116585,14 +116605,14 @@ func (s *S3ObjectTag) SetValue(v string) *S3ObjectTag {
 	return s
 }
 
-// Describes the storage parameters for S3 and S3 buckets for an instance store-backed
-// AMI.
+// Describes the storage parameters for Amazon S3 and Amazon S3 buckets for
+// an instance store-backed AMI.
 type S3Storage struct {
 	_ struct{} `type:"structure"`
 
 	// The access key ID of the owner of the bucket. Before you specify a value
 	// for your access key ID, review and follow the guidance in Best Practices
-	// for Managing AWS Access Keys (https://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html).
+	// for Managing Amazon Web Services Access Keys (https://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html).
 	AWSAccessKeyId *string `type:"string"`
 
 	// The bucket in which to store the AMI. You can specify a bucket that you already
@@ -121704,7 +121724,7 @@ type StoreImageTaskResult struct {
 	// The ID of the AMI that is being stored.
 	AmiId *string `locationName:"amiId" type:"string"`
 
-	// The name of the S3 bucket that contains the stored AMI object.
+	// The name of the Amazon S3 bucket that contains the stored AMI object.
 	Bucket *string `locationName:"bucket" type:"string"`
 
 	// The progress of the task as a percentage.
@@ -122278,20 +122298,19 @@ func (s *TagDescription) SetValue(v string) *TagDescription {
 type TagSpecification struct {
 	_ struct{} `type:"structure"`
 
-	// The type of resource to tag. Currently, the resource types that support tagging
-	// on creation are: capacity-reservation | carrier-gateway | client-vpn-endpoint
-	// | customer-gateway | dedicated-host | dhcp-options | egress-only-internet-gateway
-	// | elastic-ip | elastic-gpu | export-image-task | export-instance-task | fleet
-	// | fpga-image | host-reservation | image| import-image-task | import-snapshot-task
-	// | instance | instance-event-window | internet-gateway | ipv4pool-ec2 | ipv6pool-ec2
-	// | key-pair | launch-template | local-gateway-route-table-vpc-association
-	// | placement-group | prefix-list | natgateway | network-acl | network-interface
-	// | reserved-instances |route-table | security-group| snapshot | spot-fleet-request
-	// | spot-instances-request | snapshot | subnet | traffic-mirror-filter | traffic-mirror-session
-	// | traffic-mirror-target | transit-gateway | transit-gateway-attachment |
-	// transit-gateway-multicast-domain | transit-gateway-route-table | volume |vpc
-	// | vpc-peering-connection | vpc-endpoint (for interface and gateway endpoints)
-	// | vpc-endpoint-service (for Amazon Web Services PrivateLink) | vpc-flow-log
+	// The type of resource to tag on creation. The possible values are: capacity-reservation
+	// | carrier-gateway | client-vpn-endpoint | customer-gateway | dedicated-host
+	// | dhcp-options | egress-only-internet-gateway | elastic-gpu | elastic-ip
+	// | export-image-task | export-instance-task | fleet | fpga-image | host-reservation
+	// | image | import-image-task | import-snapshot-task | instance | instance-event-window
+	// | internet-gateway | ipv4pool-ec2 | ipv6pool-ec2 | key-pair | launch-template
+	// | local-gateway-route-table-vpc-association | natgateway | network-acl |
+	// network-insights-analysis | network-insights-path | network-interface | placement-group
+	// | prefix-list | reserved-instances | route-table | security-group | security-group-rule
+	// | snapshot | spot-fleet-request | spot-instances-request | subnet | traffic-mirror-filter
+	// | traffic-mirror-session | traffic-mirror-target | transit-gateway | transit-gateway-attachment
+	// | transit-gateway-multicast-domain | transit-gateway-route-table | volume
+	// | vpc | vpc-endpoint | vpc-endpoint-service | vpc-flow-log | vpc-peering-connection
 	// | vpn-connection | vpn-gateway.
 	//
 	// To tag a resource after it has been created, see CreateTags (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTags.html).
@@ -122508,7 +122527,7 @@ func (s *TargetConfiguration) SetOfferingId(v string) *TargetConfiguration {
 type TargetConfigurationRequest struct {
 	_ struct{} `type:"structure"`
 
-	// The number of instances the Covertible Reserved Instance offering can be
+	// The number of instances the Convertible Reserved Instance offering can be
 	// applied to. This parameter is reserved and cannot be specified in a request
 	InstanceCount *int64 `type:"integer"`
 
@@ -129176,6 +129195,9 @@ const (
 
 	// ArchitectureValuesArm64 is a ArchitectureValues enum value
 	ArchitectureValuesArm64 = "arm64"
+
+	// ArchitectureValuesX8664Mac is a ArchitectureValues enum value
+	ArchitectureValuesX8664Mac = "x86_64_mac"
 )
 
 // ArchitectureValues_Values returns all elements of the ArchitectureValues enum
@@ -129184,6 +129206,7 @@ func ArchitectureValues_Values() []string {
 		ArchitectureValuesI386,
 		ArchitectureValuesX8664,
 		ArchitectureValuesArm64,
+		ArchitectureValuesX8664Mac,
 	}
 }
 
@@ -132378,6 +132401,15 @@ const (
 
 	// InstanceTypeX2gdMetal is a InstanceType enum value
 	InstanceTypeX2gdMetal = "x2gd.metal"
+
+	// InstanceTypeVt13xlarge is a InstanceType enum value
+	InstanceTypeVt13xlarge = "vt1.3xlarge"
+
+	// InstanceTypeVt16xlarge is a InstanceType enum value
+	InstanceTypeVt16xlarge = "vt1.6xlarge"
+
+	// InstanceTypeVt124xlarge is a InstanceType enum value
+	InstanceTypeVt124xlarge = "vt1.24xlarge"
 )
 
 // InstanceType_Values returns all elements of the InstanceType enum
@@ -132800,6 +132832,9 @@ func InstanceType_Values() []string {
 		InstanceTypeX2gd12xlarge,
 		InstanceTypeX2gd16xlarge,
 		InstanceTypeX2gdMetal,
+		InstanceTypeVt13xlarge,
+		InstanceTypeVt16xlarge,
+		InstanceTypeVt124xlarge,
 	}
 }
 
@@ -133920,11 +133955,17 @@ func ResetImageAttributeName_Values() []string {
 }
 
 const (
+	// ResourceTypeCapacityReservation is a ResourceType enum value
+	ResourceTypeCapacityReservation = "capacity-reservation"
+
 	// ResourceTypeClientVpnEndpoint is a ResourceType enum value
 	ResourceTypeClientVpnEndpoint = "client-vpn-endpoint"
 
 	// ResourceTypeCustomerGateway is a ResourceType enum value
 	ResourceTypeCustomerGateway = "customer-gateway"
+
+	// ResourceTypeCarrierGateway is a ResourceType enum value
+	ResourceTypeCarrierGateway = "carrier-gateway"
 
 	// ResourceTypeDedicatedHost is a ResourceType enum value
 	ResourceTypeDedicatedHost = "dedicated-host"
@@ -133974,14 +134015,35 @@ const (
 	// ResourceTypeInternetGateway is a ResourceType enum value
 	ResourceTypeInternetGateway = "internet-gateway"
 
+	// ResourceTypeIpv4poolEc2 is a ResourceType enum value
+	ResourceTypeIpv4poolEc2 = "ipv4pool-ec2"
+
+	// ResourceTypeIpv6poolEc2 is a ResourceType enum value
+	ResourceTypeIpv6poolEc2 = "ipv6pool-ec2"
+
 	// ResourceTypeKeyPair is a ResourceType enum value
 	ResourceTypeKeyPair = "key-pair"
 
 	// ResourceTypeLaunchTemplate is a ResourceType enum value
 	ResourceTypeLaunchTemplate = "launch-template"
 
+	// ResourceTypeLocalGateway is a ResourceType enum value
+	ResourceTypeLocalGateway = "local-gateway"
+
+	// ResourceTypeLocalGatewayRouteTable is a ResourceType enum value
+	ResourceTypeLocalGatewayRouteTable = "local-gateway-route-table"
+
+	// ResourceTypeLocalGatewayVirtualInterface is a ResourceType enum value
+	ResourceTypeLocalGatewayVirtualInterface = "local-gateway-virtual-interface"
+
+	// ResourceTypeLocalGatewayVirtualInterfaceGroup is a ResourceType enum value
+	ResourceTypeLocalGatewayVirtualInterfaceGroup = "local-gateway-virtual-interface-group"
+
 	// ResourceTypeLocalGatewayRouteTableVpcAssociation is a ResourceType enum value
 	ResourceTypeLocalGatewayRouteTableVpcAssociation = "local-gateway-route-table-vpc-association"
+
+	// ResourceTypeLocalGatewayRouteTableVirtualInterfaceGroupAssociation is a ResourceType enum value
+	ResourceTypeLocalGatewayRouteTableVirtualInterfaceGroupAssociation = "local-gateway-route-table-virtual-interface-group-association"
 
 	// ResourceTypeNatgateway is a ResourceType enum value
 	ResourceTypeNatgateway = "natgateway"
@@ -134000,6 +134062,12 @@ const (
 
 	// ResourceTypePlacementGroup is a ResourceType enum value
 	ResourceTypePlacementGroup = "placement-group"
+
+	// ResourceTypePrefixList is a ResourceType enum value
+	ResourceTypePrefixList = "prefix-list"
+
+	// ResourceTypeReplaceRootVolumeTask is a ResourceType enum value
+	ResourceTypeReplaceRootVolumeTask = "replace-root-volume-task"
 
 	// ResourceTypeReservedInstances is a ResourceType enum value
 	ResourceTypeReservedInstances = "reserved-instances"
@@ -134055,6 +134123,12 @@ const (
 	// ResourceTypeVpc is a ResourceType enum value
 	ResourceTypeVpc = "vpc"
 
+	// ResourceTypeVpcEndpoint is a ResourceType enum value
+	ResourceTypeVpcEndpoint = "vpc-endpoint"
+
+	// ResourceTypeVpcEndpointService is a ResourceType enum value
+	ResourceTypeVpcEndpointService = "vpc-endpoint-service"
+
 	// ResourceTypeVpcPeeringConnection is a ResourceType enum value
 	ResourceTypeVpcPeeringConnection = "vpc-peering-connection"
 
@@ -134071,8 +134145,10 @@ const (
 // ResourceType_Values returns all elements of the ResourceType enum
 func ResourceType_Values() []string {
 	return []string{
+		ResourceTypeCapacityReservation,
 		ResourceTypeClientVpnEndpoint,
 		ResourceTypeCustomerGateway,
+		ResourceTypeCarrierGateway,
 		ResourceTypeDedicatedHost,
 		ResourceTypeDhcpOptions,
 		ResourceTypeEgressOnlyInternetGateway,
@@ -134089,15 +134165,24 @@ func ResourceType_Values() []string {
 		ResourceTypeInstance,
 		ResourceTypeInstanceEventWindow,
 		ResourceTypeInternetGateway,
+		ResourceTypeIpv4poolEc2,
+		ResourceTypeIpv6poolEc2,
 		ResourceTypeKeyPair,
 		ResourceTypeLaunchTemplate,
+		ResourceTypeLocalGateway,
+		ResourceTypeLocalGatewayRouteTable,
+		ResourceTypeLocalGatewayVirtualInterface,
+		ResourceTypeLocalGatewayVirtualInterfaceGroup,
 		ResourceTypeLocalGatewayRouteTableVpcAssociation,
+		ResourceTypeLocalGatewayRouteTableVirtualInterfaceGroupAssociation,
 		ResourceTypeNatgateway,
 		ResourceTypeNetworkAcl,
 		ResourceTypeNetworkInterface,
 		ResourceTypeNetworkInsightsAnalysis,
 		ResourceTypeNetworkInsightsPath,
 		ResourceTypePlacementGroup,
+		ResourceTypePrefixList,
+		ResourceTypeReplaceRootVolumeTask,
 		ResourceTypeReservedInstances,
 		ResourceTypeRouteTable,
 		ResourceTypeSecurityGroup,
@@ -134116,6 +134201,8 @@ func ResourceType_Values() []string {
 		ResourceTypeTransitGatewayRouteTable,
 		ResourceTypeVolume,
 		ResourceTypeVpc,
+		ResourceTypeVpcEndpoint,
+		ResourceTypeVpcEndpointService,
 		ResourceTypeVpcPeeringConnection,
 		ResourceTypeVpnConnection,
 		ResourceTypeVpnGateway,
