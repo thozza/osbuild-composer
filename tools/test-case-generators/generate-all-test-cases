@@ -97,6 +97,7 @@ import argparse
 import subprocess
 import json
 import os
+import sys
 import tempfile
 import shutil
 import time
@@ -105,6 +106,8 @@ import contextlib
 import multiprocessing
 import logging
 import glob
+
+from typing import Tuple, Type
 
 import yaml
 
@@ -678,6 +681,29 @@ class S390xQEMURunner(BaseQEMURunner):
         ]
 
 
+class Sources:
+    _fs_path = ""
+    _git_url = ""
+    _git_branch = ""
+
+    @property
+    def path(self) -> str:
+        return self._fs_path
+
+    @path.setter
+    def path(self, path: str):
+        self._fs_path = path
+
+    @property
+    def git(self) -> Tuple[str, str]:
+        return (self._git_branch, self._git_url)
+
+    @git.setter
+    def git(self, git: Tuple[str, str]):
+        self._git_url = git[0]
+        self._git_branch = git[1]
+
+
 class BaseTestCaseMatrixGenerator(contextlib.AbstractContextManager):
     """
     Base class representing generation of all test cases based on provided test
@@ -705,7 +731,7 @@ class BaseTestCaseMatrixGenerator(contextlib.AbstractContextManager):
         "python3-pyyaml",  # needed by image-info
     ]
 
-    def __init__(self, arch_gen_matrix, sources, output, ssh_id_file, keep_workdir=False, log_level=logging.INFO):
+    def __init__(self, arch_gen_matrix, sources: Sources, output, ssh_id_file, keep_workdir=False, log_level=logging.INFO):
         """
         'arch_get_matrix' is a dict of requested distro-image_type matrix per architecture:
         {
@@ -782,7 +808,7 @@ class BaseTestCaseMatrixGenerator(contextlib.AbstractContextManager):
             process.join()
         self._processes.clear()
 
-    def _runner_process_main(self, runner_cls, runner_cls_args, arch):
+    def _runner_process_main(self, runner_cls: Type[BaseRunner], runner_cls_args, arch: str):
         """
         Main function of a process generating test cases for a single architecture
         using the provided Runner class
@@ -794,7 +820,7 @@ class BaseTestCaseMatrixGenerator(contextlib.AbstractContextManager):
         with runner_cls(*runner_cls_args) as runner:
             self._generate_arch_with_runner(runner, arch)
 
-    def _generate_arch_with_runner(self, runner, arch):
+    def _generate_arch_with_runner(self, runner: BaseRunner, arch :str):
         """
         Generate test cases for one architecture using the provided Runner.
 
@@ -825,10 +851,19 @@ class BaseTestCaseMatrixGenerator(contextlib.AbstractContextManager):
             rpm_versions, _, _ = runner.run_command("rpm -q osbuild osbuild-composer")
             log.info("Installed packages: %s", " ".join(rpm_versions.split("\n")))
 
-            # copy sources from the host to the runner
-            log.info("Copying sources to the runner")
             runner_sources_dir = f"{runner_workdir}/sources"
-            runner.copytree_to_runner(self.sources, runner_sources_dir)
+            git_url, git_branch = self.sources.git
+            if git_url:
+                runner.run_command_check_call("sudo dnf install -y git")
+                log.info("Cloning sources from git")
+                git_cmd = f"git clone {git_url}"
+                git_cmd += f" --branch {git_branch}" if git_branch else ""
+                git_cmd += f" {runner_sources_dir}"
+                runner.run_command_check_call(git_cmd)
+            else:
+                # copy sources from the host to the runner
+                log.info("Copying sources to the runner")
+                runner.copytree_to_runner(self.sources.path, runner_sources_dir)
 
             # create output directory for the results on the runner
             runner_output_dir = f"{runner_workdir}/output"
@@ -1051,7 +1086,7 @@ class QEMUTestCaseMatrixGenerator(BaseTestCaseMatrixGenerator):
         parser_qemu.set_defaults(func=QEMUTestCaseMatrixGenerator.main)
 
     @staticmethod
-    def main(arch_gen_matrix_dict, sources, output, ssh_id_file, keep_workdir, parser_args):
+    def main(arch_gen_matrix_dict, sources: Sources, output, ssh_id_file, keep_workdir, parser_args):
         """
         The main function of the 'qemu' command
         """
@@ -1183,7 +1218,7 @@ class RemoteTestCaseMatrixGenerator(BaseTestCaseMatrixGenerator):
         parser_remote.set_defaults(func=RemoteTestCaseMatrixGenerator.main)
 
     @staticmethod
-    def main(arch_gen_matrix_dict, sources, output, ssh_id_file, keep_workdir, parser_args):
+    def main(arch_gen_matrix_dict, sources: Sources, output, ssh_id_file, keep_workdir, parser_args):
         """
         The main function of the 'remote' command
         """
@@ -1240,12 +1275,25 @@ def get_args():
         help="directory for storing generated image test cases",
         required=True
     )
-    parser.add_argument(
+    sources = parser.add_mutually_exclusive_group()
+    sources.add_argument(
         "--sources",
         metavar="DIR",
         type=os.path.abspath,
         help="osbuild-composer sources directory used when generate test cases. " + \
             "If not provided, the current working directory is used."
+    )
+    sources.add_argument(
+        "--sources-git",
+        metavar="URL",
+        type=str,
+        help="git URL with sources to be used when generating test cases"
+    )
+    parser.add_argument(
+        "--sources-git-branch",
+        metavar="BRANCH",
+        type=str,
+        help="git branch to use from the specified git repository"
     )
     parser.add_argument(
         "--distro",
@@ -1306,7 +1354,15 @@ def get_args():
 
 def main(args):
     output = args.output
-    sources = args.sources if args.sources else os.getcwd()
+    sources = Sources()
+    git_url = args.sources_git
+    git_branch = args.sources_git_branch
+    if git_url:
+        sources.git = (git_url, git_branch)
+    else:
+        if git_branch:
+            sys.exit("Error: specified git branch without git URL")
+        sources.path = args.sources if args.sources else os.getcwd()
     gen_matrix_file = args.gen_matrix_file
 
     distros = args.distro
