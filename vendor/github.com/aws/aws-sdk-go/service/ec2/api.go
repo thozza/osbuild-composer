@@ -36385,8 +36385,7 @@ func (c *EC2) ModifyInstancePlacementRequest(input *ModifyInstancePlacementInput
 //
 //    * Change the Dedicated Host with which an instance is associated.
 //
-//    * Change the instance tenancy of an instance from host to dedicated, or
-//    from dedicated to host.
+//    * Change the instance tenancy of an instance.
 //
 //    * Move an instance to or from a placement group (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html).
 //
@@ -101462,7 +101461,7 @@ type Instance struct {
 	// The time the instance was launched.
 	LaunchTime *time.Time `locationName:"launchTime" type:"timestamp"`
 
-	// The license configurations.
+	// The license configurations for the instance.
 	Licenses []*LicenseConfiguration `locationName:"licenseSet" locationNameList:"item" type:"list"`
 
 	// The metadata options for the instance.
@@ -101482,6 +101481,11 @@ type Instance struct {
 
 	// The value is Windows for Windows instances; otherwise blank.
 	Platform *string `locationName:"platform" type:"string" enum:"PlatformValues"`
+
+	// The platform details value for the instance. For more information, see AMI
+	// billing information fields (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/billing-info-fields.html)
+	// in the Amazon EC2 User Guide.
+	PlatformDetails *string `locationName:"platformDetails" type:"string"`
 
 	// (IPv4 only) The private DNS hostname name assigned to the instance. This
 	// DNS hostname can only be used inside the Amazon EC2 network. This name is
@@ -101548,6 +101552,14 @@ type Instance struct {
 
 	// Any tags assigned to the instance.
 	Tags []*Tag `locationName:"tagSet" locationNameList:"item" type:"list"`
+
+	// The usage operation value for the instance. For more information, see AMI
+	// billing information fields (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/billing-info-fields.html)
+	// in the Amazon EC2 User Guide.
+	UsageOperation *string `locationName:"usageOperation" type:"string"`
+
+	// The time that the usage operation was last updated.
+	UsageOperationUpdateTime *time.Time `locationName:"usageOperationUpdateTime" type:"timestamp"`
 
 	// The virtualization type of the instance.
 	VirtualizationType *string `locationName:"virtualizationType" type:"string" enum:"VirtualizationType"`
@@ -101754,6 +101766,12 @@ func (s *Instance) SetPlatform(v string) *Instance {
 	return s
 }
 
+// SetPlatformDetails sets the PlatformDetails field's value.
+func (s *Instance) SetPlatformDetails(v string) *Instance {
+	s.PlatformDetails = &v
+	return s
+}
+
 // SetPrivateDnsName sets the PrivateDnsName field's value.
 func (s *Instance) SetPrivateDnsName(v string) *Instance {
 	s.PrivateDnsName = &v
@@ -101853,6 +101871,18 @@ func (s *Instance) SetSubnetId(v string) *Instance {
 // SetTags sets the Tags field's value.
 func (s *Instance) SetTags(v []*Tag) *Instance {
 	s.Tags = v
+	return s
+}
+
+// SetUsageOperation sets the UsageOperation field's value.
+func (s *Instance) SetUsageOperation(v string) *Instance {
+	s.UsageOperation = &v
+	return s
+}
+
+// SetUsageOperationUpdateTime sets the UsageOperationUpdateTime field's value.
+func (s *Instance) SetUsageOperationUpdateTime(v time.Time) *Instance {
+	s.UsageOperationUpdateTime = &v
 	return s
 }
 
