@@ -1123,8 +1123,8 @@ class RemoteTestCaseMatrixGenerator(BaseTestCaseMatrixGenerator):
         'hosts' is a dict of a remote system hostnames or IP addresses for each supported architecture,
         that should be used to generate image test cases:
         {
-            "arch1": "<hostname/IP>",
-            "arch2": "<hostname/IP>",
+            "arch1": ["<hostname/IP>", ...],
+            "arch2": ["<hostname/IP>", ...],
             ...
         }
         'username' is a username to be used to SSH to the remote hosts. The same username is used for all remote
@@ -1159,7 +1159,7 @@ class RemoteTestCaseMatrixGenerator(BaseTestCaseMatrixGenerator):
 
         # check that we have image for each needed architecture
         for arch in self.arch_gen_matrix.keys():
-            if self.hosts.get(arch) is None:
+            if not self.hosts.get(arch):
                 raise RuntimeError(f"architecture '{arch}' is in requested test matrix, but no host was provided")
 
     def generate(self):
@@ -1188,25 +1188,33 @@ class RemoteTestCaseMatrixGenerator(BaseTestCaseMatrixGenerator):
             "--host-x86_64",
             metavar="HOSTNAME",
             help="hostname or an IP address of the remote x86_64 host",
-            required=False
+            required=False,
+            action="append",
+            default=[]
         )
         parser_remote.add_argument(
             "--host-ppc64le",
             metavar="HOSTNAME",
             help="hostname or an IP address of the remote ppc64le host",
-            required=False
+            required=False,
+            action="append",
+            default=[]
         )
         parser_remote.add_argument(
             "--host-aarch64",
             metavar="HOSTNAME",
             help="hostname or an IP address of the remote aarch64 host",
-            required=False
+            required=False,
+            action="append",
+            default=[]
         )
         parser_remote.add_argument(
             "--host-s390x",
             metavar="HOSTNAME",
             help="hostname or an IP address of the remote s390x host",
-            required=False
+            required=False,
+            action="append",
+            default=[]
         )
         parser_remote.add_argument(
             "-u", "--username",
