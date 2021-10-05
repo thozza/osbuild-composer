@@ -134,10 +134,11 @@ class BaseRunner(contextlib.AbstractContextManager):
     test case definitions.
     """
 
-    def __init__(self, hostname, username="root", port=22):
+    def __init__(self, hostname, username="root", port=22, repos=[]):
         self.hostname = hostname
         self.port = port
         self.username = username
+        self.repos = repos
         self.runner_ready = False
 
     def run_command(self, command):
@@ -252,7 +253,22 @@ class BaseRunner(contextlib.AbstractContextManager):
                 raise subprocess.TimeoutExpired("wait_until_ready()", timeout)
             time.sleep(retry_sec)
         # make sure that rsync is installed to be able to transfer the data
-        self.run_command_check_call("sudo dnf -y install rsync")
+        self.dnf_install(["rsync"])
+
+    def dnf_install(self, packages):
+        """
+        Install the provided packages using DNF.
+
+        If the runner was instantiated with a list of repositories, these will
+        be added to the DNF command.
+        """
+        cmd = ["dnf", "-y"]
+        for repo in self.repos:
+            cmd.extend(["--repofrompath", repo])
+        cmd.append("install")
+        cmd.extend(packages)
+
+        self.run_command_check_call(" ".join(cmd))
 
     def is_ready(self, command="id"):
         """
@@ -304,8 +320,8 @@ class BaseQEMURunner(BaseRunner):
         "sudo": "ALL=(ALL) NOPASSWD:ALL"
     }
 
-    def __init__(self, image, username, cdrom_iso=None):
-        super().__init__("localhost", username)
+    def __init__(self, image, username, repos=[], cdrom_iso=None):
+        super().__init__("localhost", username, repos=repos)
         self._check_qemu_bin()
 
         # path to image to run
@@ -705,7 +721,7 @@ class BaseTestCaseMatrixGenerator(contextlib.AbstractContextManager):
         "python3-pyyaml",  # needed by image-info
     ]
 
-    def __init__(self, arch_gen_matrix, sources, output, ssh_id_file, keep_workdir=False, log_level=logging.INFO):
+    def __init__(self, arch_gen_matrix, sources, output, ssh_id_file, repos=[], keep_workdir=False, log_level=logging.INFO):
         """
         'arch_get_matrix' is a dict of requested distro-image_type matrix per architecture:
         {
@@ -739,6 +755,7 @@ class BaseTestCaseMatrixGenerator(contextlib.AbstractContextManager):
         self.sources = sources
         self.output = output
         self.ssh_id_file = ssh_id_file
+        self.repos = repos
         self.keep_workdir = keep_workdir
         self.log_level = log_level
 
@@ -820,7 +837,7 @@ class BaseTestCaseMatrixGenerator(contextlib.AbstractContextManager):
             runner.run_command_check_call(f"mkdir {runner_osbuild_store_dir}")
 
             # install necessary packages
-            runner.run_command_check_call("sudo dnf install -y " + " ".join(self.install_rpms_list))
+            runner.dnf_install(self.install_rpms_list)
             # Log installed versions of important RPMs
             rpm_versions, _, _ = runner.run_command("rpm -q osbuild osbuild-composer")
             log.info("Installed packages: %s", " ".join(rpm_versions.split("\n")))
@@ -1288,6 +1305,14 @@ def get_args():
             action="store_true",
             help="Don't delete the workdir created on the remote host after finishing.",
             default=False
+        )
+    parser.add_argument(
+            "--repofrompath",
+            metavar="<repo>,<path/url>",
+            action="store_append",
+            help="Specify a repository to add to the repositories used when installing packages on the runner. " + \
+                "Can be specified multiple times.",
+            default=[]
         )
     parser.add_argument(
         "-d", "--debug",
