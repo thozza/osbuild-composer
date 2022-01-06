@@ -42020,6 +42020,80 @@ func (c *EC2) ModifyVpcEndpointServiceConfigurationWithContext(ctx aws.Context, 
 	return out, req.Send()
 }
 
+const opModifyVpcEndpointServicePayerResponsibility = "ModifyVpcEndpointServicePayerResponsibility"
+
+// ModifyVpcEndpointServicePayerResponsibilityRequest generates a "aws/request.Request" representing the
+// client's request for the ModifyVpcEndpointServicePayerResponsibility operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ModifyVpcEndpointServicePayerResponsibility for more information on using the ModifyVpcEndpointServicePayerResponsibility
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ModifyVpcEndpointServicePayerResponsibilityRequest method.
+//    req, resp := client.ModifyVpcEndpointServicePayerResponsibilityRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/ModifyVpcEndpointServicePayerResponsibility
+func (c *EC2) ModifyVpcEndpointServicePayerResponsibilityRequest(input *ModifyVpcEndpointServicePayerResponsibilityInput) (req *request.Request, output *ModifyVpcEndpointServicePayerResponsibilityOutput) {
+	op := &request.Operation{
+		Name:       opModifyVpcEndpointServicePayerResponsibility,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &ModifyVpcEndpointServicePayerResponsibilityInput{}
+	}
+
+	output = &ModifyVpcEndpointServicePayerResponsibilityOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ModifyVpcEndpointServicePayerResponsibility API operation for Amazon Elastic Compute Cloud.
+//
+// Modifies the payer responsibility for your VPC endpoint service.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Elastic Compute Cloud's
+// API operation ModifyVpcEndpointServicePayerResponsibility for usage and error information.
+// See also, https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/ModifyVpcEndpointServicePayerResponsibility
+func (c *EC2) ModifyVpcEndpointServicePayerResponsibility(input *ModifyVpcEndpointServicePayerResponsibilityInput) (*ModifyVpcEndpointServicePayerResponsibilityOutput, error) {
+	req, out := c.ModifyVpcEndpointServicePayerResponsibilityRequest(input)
+	return out, req.Send()
+}
+
+// ModifyVpcEndpointServicePayerResponsibilityWithContext is the same as ModifyVpcEndpointServicePayerResponsibility with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ModifyVpcEndpointServicePayerResponsibility for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *EC2) ModifyVpcEndpointServicePayerResponsibilityWithContext(ctx aws.Context, input *ModifyVpcEndpointServicePayerResponsibilityInput, opts ...request.Option) (*ModifyVpcEndpointServicePayerResponsibilityOutput, error) {
+	req, out := c.ModifyVpcEndpointServicePayerResponsibilityRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opModifyVpcEndpointServicePermissions = "ModifyVpcEndpointServicePermissions"
 
 // ModifyVpcEndpointServicePermissionsRequest generates a "aws/request.Request" representing the
@@ -128011,6 +128085,111 @@ func (s *ModifyVpcEndpointServiceConfigurationOutput) SetReturn(v bool) *ModifyV
 	return s
 }
 
+type ModifyVpcEndpointServicePayerResponsibilityInput struct {
+	_ struct{} `type:"structure"`
+
+	// Checks whether you have the required permissions for the action, without
+	// actually making the request, and provides an error response. If you have
+	// the required permissions, the error response is DryRunOperation. Otherwise,
+	// it is UnauthorizedOperation.
+	DryRun *bool `type:"boolean"`
+
+	// The entity that is responsible for the endpoint costs. The default is the
+	// endpoint owner. If you set the payer responsibility to the service owner,
+	// you cannot set it back to the endpoint owner.
+	//
+	// PayerResponsibility is a required field
+	PayerResponsibility *string `type:"string" required:"true" enum:"PayerResponsibility"`
+
+	// The ID of the service.
+	//
+	// ServiceId is a required field
+	ServiceId *string `type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ModifyVpcEndpointServicePayerResponsibilityInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ModifyVpcEndpointServicePayerResponsibilityInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ModifyVpcEndpointServicePayerResponsibilityInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ModifyVpcEndpointServicePayerResponsibilityInput"}
+	if s.PayerResponsibility == nil {
+		invalidParams.Add(request.NewErrParamRequired("PayerResponsibility"))
+	}
+	if s.ServiceId == nil {
+		invalidParams.Add(request.NewErrParamRequired("ServiceId"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetDryRun sets the DryRun field's value.
+func (s *ModifyVpcEndpointServicePayerResponsibilityInput) SetDryRun(v bool) *ModifyVpcEndpointServicePayerResponsibilityInput {
+	s.DryRun = &v
+	return s
+}
+
+// SetPayerResponsibility sets the PayerResponsibility field's value.
+func (s *ModifyVpcEndpointServicePayerResponsibilityInput) SetPayerResponsibility(v string) *ModifyVpcEndpointServicePayerResponsibilityInput {
+	s.PayerResponsibility = &v
+	return s
+}
+
+// SetServiceId sets the ServiceId field's value.
+func (s *ModifyVpcEndpointServicePayerResponsibilityInput) SetServiceId(v string) *ModifyVpcEndpointServicePayerResponsibilityInput {
+	s.ServiceId = &v
+	return s
+}
+
+type ModifyVpcEndpointServicePayerResponsibilityOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Returns true if the request succeeds; otherwise, it returns an error.
+	ReturnValue *bool `locationName:"return" type:"boolean"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ModifyVpcEndpointServicePayerResponsibilityOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ModifyVpcEndpointServicePayerResponsibilityOutput) GoString() string {
+	return s.String()
+}
+
+// SetReturnValue sets the ReturnValue field's value.
+func (s *ModifyVpcEndpointServicePayerResponsibilityOutput) SetReturnValue(v bool) *ModifyVpcEndpointServicePayerResponsibilityOutput {
+	s.ReturnValue = &v
+	return s
+}
+
 type ModifyVpcEndpointServicePermissionsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -145208,6 +145387,9 @@ type ServiceConfiguration struct {
 	// The Amazon Resource Names (ARNs) of the Network Load Balancers for the service.
 	NetworkLoadBalancerArns []*string `locationName:"networkLoadBalancerArnSet" locationNameList:"item" type:"list"`
 
+	// The payer responsibility.
+	PayerResponsibility *string `locationName:"payerResponsibility" type:"string" enum:"PayerResponsibility"`
+
 	// The private DNS name for the service.
 	PrivateDnsName *string `locationName:"privateDnsName" type:"string"`
 
@@ -145284,6 +145466,12 @@ func (s *ServiceConfiguration) SetNetworkLoadBalancerArns(v []*string) *ServiceC
 	return s
 }
 
+// SetPayerResponsibility sets the PayerResponsibility field's value.
+func (s *ServiceConfiguration) SetPayerResponsibility(v string) *ServiceConfiguration {
+	s.PayerResponsibility = &v
+	return s
+}
+
 // SetPrivateDnsName sets the PrivateDnsName field's value.
 func (s *ServiceConfiguration) SetPrivateDnsName(v string) *ServiceConfiguration {
 	s.PrivateDnsName = &v
@@ -145346,6 +145534,9 @@ type ServiceDetail struct {
 
 	// The Amazon Web Services account ID of the service owner.
 	Owner *string `locationName:"owner" type:"string"`
+
+	// The payer responsibility.
+	PayerResponsibility *string `locationName:"payerResponsibility" type:"string" enum:"PayerResponsibility"`
 
 	// The private DNS name for the service.
 	PrivateDnsName *string `locationName:"privateDnsName" type:"string"`
@@ -145420,6 +145611,12 @@ func (s *ServiceDetail) SetManagesVpcEndpoints(v bool) *ServiceDetail {
 // SetOwner sets the Owner field's value.
 func (s *ServiceDetail) SetOwner(v string) *ServiceDetail {
 	s.Owner = &v
+	return s
+}
+
+// SetPayerResponsibility sets the PayerResponsibility field's value.
+func (s *ServiceDetail) SetPayerResponsibility(v string) *ServiceDetail {
+	s.PayerResponsibility = &v
 	return s
 }
 
@@ -163081,6 +163278,18 @@ func PartitionLoadFrequency_Values() []string {
 		PartitionLoadFrequencyDaily,
 		PartitionLoadFrequencyWeekly,
 		PartitionLoadFrequencyMonthly,
+	}
+}
+
+const (
+	// PayerResponsibilityServiceOwner is a PayerResponsibility enum value
+	PayerResponsibilityServiceOwner = "ServiceOwner"
+)
+
+// PayerResponsibility_Values returns all elements of the PayerResponsibility enum
+func PayerResponsibility_Values() []string {
+	return []string{
+		PayerResponsibilityServiceOwner,
 	}
 }
 
