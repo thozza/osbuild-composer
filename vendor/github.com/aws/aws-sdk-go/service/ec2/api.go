@@ -4339,26 +4339,14 @@ func (c *EC2) CreateCustomerGatewayRequest(input *CreateCustomerGatewayInput) (r
 // For devices that use Border Gateway Protocol (BGP), you can also provide
 // the device's BGP Autonomous System Number (ASN). You can use an existing
 // ASN assigned to your network. If you don't have an ASN already, you can use
-// a private ASN (in the 64512 - 65534 range).
-//
-// Amazon EC2 supports all 4-byte ASN numbers in the range of 1 - 2147483647,
-// with the exception of the following:
-//
-//    * 7224 - reserved in the us-east-1 Region
-//
-//    * 9059 - reserved in the eu-west-1 Region
-//
-//    * 17943 - reserved in the ap-southeast-1 Region
-//
-//    * 10124 - reserved in the ap-northeast-1 Region
-//
-// For more information, see Amazon Web Services Site-to-Site VPN (https://docs.aws.amazon.com/vpn/latest/s2svpn/VPC_VPN.html)
+// a private ASN. For more information, see Customer gateway options for your
+// Site-to-Site VPN connection (https://docs.aws.amazon.com/vpn/latest/s2svpn/cgw-options.html)
 // in the Amazon Web Services Site-to-Site VPN User Guide.
 //
 // To create more than one customer gateway with the same VPN type, IP address,
-// and BGP ASN, specify a unique device name for each customer gateway. Identical
-// requests return information about the existing customer gateway and do not
-// create new customer gateways.
+// and BGP ASN, specify a unique device name for each customer gateway. An identical
+// request returns information about the existing customer gateway; it doesn't
+// create a new customer gateway.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -5039,11 +5027,15 @@ func (c *EC2) CreateImageRequest(input *CreateImageInput) (req *request.Request,
 // Creates an Amazon EBS-backed AMI from an Amazon EBS-backed instance that
 // is either running or stopped.
 //
-// By default, Amazon EC2 shuts down and reboots the instance before creating
-// the AMI to ensure that everything on the instance is stopped and in a consistent
-// state during the creation process. If you're confident that your instance
-// is in a consistent state appropriate for AMI creation, use the NoReboot parameter
-// to prevent Amazon EC2 from shutting down and rebooting the instance.
+// By default, when Amazon EC2 creates the new AMI, it reboots the instance
+// so that it can take snapshots of the attached volumes while data is at rest,
+// in order to ensure a consistent state. You can set the NoReboot parameter
+// to true in the API request, or use the --no-reboot option in the CLI to prevent
+// Amazon EC2 from shutting down and rebooting the instance.
+//
+// If you choose to bypass the shutdown and reboot process by setting the NoReboot
+// parameter to true in the API request, or by using the --no-reboot option
+// in the CLI, we can't guarantee the file system integrity of the created image.
 //
 // If you customized your instance with instance store volumes or Amazon EBS
 // volumes in addition to the root device volume, the new AMI contains block
@@ -5380,7 +5372,7 @@ func (c *EC2) CreateIpamRequest(input *CreateIpamInput) (req *request.Request, o
 
 // CreateIpam API operation for Amazon Elastic Compute Cloud.
 //
-// Create an IPAM. Amazon VCP IP Address Manager (IPAM) is a VPC feature that
+// Create an IPAM. Amazon VPC IP Address Manager (IPAM) is a VPC feature that
 // you can use to automate your IP address management workflows including assigning,
 // tracking, troubleshooting, and auditing IP addresses across Amazon Web Services
 // Regions and accounts throughout your Amazon Web Services Organization.
@@ -5710,10 +5702,18 @@ func (c *EC2) CreateLaunchTemplateRequest(input *CreateLaunchTemplateInput) (req
 
 // CreateLaunchTemplate API operation for Amazon Elastic Compute Cloud.
 //
-// Creates a launch template. A launch template contains the parameters to launch
-// an instance. When you launch an instance using RunInstances, you can specify
-// a launch template instead of providing the launch parameters in the request.
-// For more information, see Launching an instance from a launch template (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-launch-templates.html)
+// Creates a launch template.
+//
+// A launch template contains the parameters to launch an instance. When you
+// launch an instance using RunInstances, you can specify a launch template
+// instead of providing the launch parameters in the request. For more information,
+// see Launching an instance from a launch template (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-launch-templates.html)
+// in the Amazon Elastic Compute Cloud User Guide.
+//
+// If you want to clone an existing launch template as the basis for creating
+// a new launch template, you can use the Amazon EC2 console. The API, SDKs,
+// and CLI do not support cloning a template. For more information, see Create
+// a launch template from an existing launch template (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-launch-templates.html#create-launch-template-from-existing-launch-template)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -9196,24 +9196,7 @@ func (c *EC2) CreateVpcEndpointRequest(input *CreateVpcEndpointInput) (req *requ
 // create a private connection between your VPC and the service. The service
 // may be provided by Amazon Web Services, an Amazon Web Services Marketplace
 // Partner, or another Amazon Web Services account. For more information, see
-// VPC Endpoints (https://docs.aws.amazon.com/vpc/latest/userguide/vpc-endpoints.html)
-// in the Amazon Virtual Private Cloud User Guide.
-//
-// A gateway endpoint serves as a target for a route in your route table for
-// traffic destined for the Amazon Web Service. You can specify an endpoint
-// policy to attach to the endpoint, which will control access to the service
-// from your VPC. You can also specify the VPC route tables that use the endpoint.
-//
-// An interface endpoint is a network interface in your subnet that serves as
-// an endpoint for communicating with the specified service. You can specify
-// the subnets in which to create an endpoint, and the security groups to associate
-// with the endpoint network interface.
-//
-// A GatewayLoadBalancer endpoint is a network interface in your subnet that
-// serves an endpoint for communicating with a Gateway Load Balancer that you've
-// configured as a VPC endpoint service.
-//
-// Use DescribeVpcEndpointServices to get a list of supported services.
+// the Amazon Web Services PrivateLink Guide (https://docs.aws.amazon.com/vpc/latest/privatelink/).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -9367,26 +9350,23 @@ func (c *EC2) CreateVpcEndpointServiceConfigurationRequest(input *CreateVpcEndpo
 
 // CreateVpcEndpointServiceConfiguration API operation for Amazon Elastic Compute Cloud.
 //
-// Creates a VPC endpoint service configuration to which service consumers (Amazon
-// Web Services accounts, IAM users, and IAM roles) can connect.
+// Creates a VPC endpoint service to which service consumers (Amazon Web Services
+// accounts, IAM users, and IAM roles) can connect.
 //
-// To create an endpoint service configuration, you must first create one of
-// the following for your service:
+// Before you create an endpoint service, you must create one of the following
+// for your service:
 //
-//    * A Network Load Balancer (https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html).
+//    * A Network Load Balancer (https://docs.aws.amazon.com/elasticloadbalancing/latest/network/).
 //    Service consumers connect to your service using an interface endpoint.
 //
-//    * A Gateway Load Balancer (https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html).
+//    * A Gateway Load Balancer (https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/).
 //    Service consumers connect to your service using a Gateway Load Balancer
 //    endpoint.
 //
-// For more information, see VPC Endpoint Services (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-service.html)
-// in the Amazon Virtual Private Cloud User Guide.
-//
 // If you set the private DNS name, you must prove that you own the private
-// DNS domain name. For more information, see VPC Endpoint Service Private DNS
-// Name Verification (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-services-dns-validation.html)
-// in the Amazon Virtual Private Cloud User Guide.
+// DNS domain name.
+//
+// For more information, see the Amazon Web Services PrivateLink Guide (https://docs.aws.amazon.com/vpc/latest/privatelink/).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -10661,11 +10641,6 @@ func (c *EC2) DeleteIpamRequest(input *DeleteIpamInput) (req *request.Request, o
 //
 // Delete an IPAM. Deleting an IPAM removes all monitored data associated with
 // the IPAM including the historical data for CIDRs.
-//
-// You cannot delete an IPAM if there are CIDRs provisioned to pools or if there
-// are allocations in the pools within the IPAM. To deprovision pool CIDRs,
-// see DeprovisionIpamPoolCidr (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DeprovisionIpamPoolCidr.html).
-// To release allocations, see ReleaseIpamPoolAllocation (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ReleaseIpamPoolAllocation.html).
 //
 // For more information, see Delete an IPAM (/vpc/latest/ipam/delete-ipam.html)
 // in the Amazon VPC IPAM User Guide.
@@ -42108,9 +42083,9 @@ func (c *EC2) ModifyVolumeRequest(input *ModifyVolumeInput) (req *request.Reques
 // With previous-generation instance types, resizing an EBS volume might require
 // detaching and reattaching the volume or stopping and restarting the instance.
 //
-// If you reach the maximum volume modification rate per volume limit, you must
-// wait at least six hours before applying further modifications to the affected
-// EBS volume.
+// After modifying a volume, you must wait at least six hours and ensure that
+// the volume is in the in-use or available state before you can modify the
+// same volume. This is sometimes referred to as a cooldown period.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -42345,8 +42320,8 @@ func (c *EC2) ModifyVpcEndpointRequest(input *ModifyVpcEndpointInput) (req *requ
 //
 // Modifies attributes of a specified VPC endpoint. The attributes that you
 // can modify depend on the type of VPC endpoint (interface, gateway, or Gateway
-// Load Balancer). For more information, see VPC Endpoints (https://docs.aws.amazon.com/vpc/latest/userguide/vpc-endpoints.html)
-// in the Amazon Virtual Private Cloud User Guide.
+// Load Balancer). For more information, see the Amazon Web Services PrivateLink
+// Guide (https://docs.aws.amazon.com/vpc/latest/privatelink/).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -42502,9 +42477,7 @@ func (c *EC2) ModifyVpcEndpointServiceConfigurationRequest(input *ModifyVpcEndpo
 // to your endpoint service through an interface VPC endpoint.
 //
 // If you set or modify the private DNS name, you must prove that you own the
-// private DNS domain name. For more information, see VPC Endpoint Service Private
-// DNS Name Verification (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-services-dns-validation.html)
-// in the Amazon Virtual Private Cloud User Guide.
+// private DNS domain name.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -42652,9 +42625,9 @@ func (c *EC2) ModifyVpcEndpointServicePermissionsRequest(input *ModifyVpcEndpoin
 
 // ModifyVpcEndpointServicePermissions API operation for Amazon Elastic Compute Cloud.
 //
-// Modifies the permissions for your VPC endpoint service (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-service.html).
-// You can add or remove permissions for service consumers (IAM users, IAM roles,
-// and Amazon Web Services accounts) to connect to your endpoint service.
+// Modifies the permissions for your VPC endpoint service. You can add or remove
+// permissions for service consumers (IAM users, IAM roles, and Amazon Web Services
+// accounts) to connect to your endpoint service.
 //
 // If you grant permissions to all principals, the service is public. Any users
 // who know the name of a public service can send a request to attach an endpoint.
@@ -47889,9 +47862,7 @@ func (c *EC2) StartVpcEndpointServicePrivateDnsVerificationRequest(input *StartV
 // consumer can use the name to access the service.
 //
 // Before the service provider runs this command, they must add a record to
-// the DNS server. For more information, see Adding a TXT Record to Your Domain's
-// DNS Server (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-services-dns-validation.html#add-dns-txt-record)
-// in the Amazon VPC User Guide.
+// the DNS server.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -62383,12 +62354,17 @@ type CreateImageInput struct {
 	// Name is a required field
 	Name *string `locationName:"name" type:"string" required:"true"`
 
-	// By default, Amazon EC2 attempts to shut down and reboot the instance before
-	// creating the image. If the No Reboot option is set, Amazon EC2 doesn't shut
-	// down the instance before creating the image. Without a reboot, the AMI will
-	// be crash consistent (all the volumes are snapshotted at the same time), but
-	// not application consistent (all the operating system buffers are not flushed
-	// to disk before the snapshots are created).
+	// By default, when Amazon EC2 creates the new AMI, it reboots the instance
+	// so that it can take snapshots of the attached volumes while data is at rest,
+	// in order to ensure a consistent state. You can set the NoReboot parameter
+	// to true in the API request, or use the --no-reboot option in the CLI to prevent
+	// Amazon EC2 from shutting down and rebooting the instance.
+	//
+	// If you choose to bypass the shutdown and reboot process by setting the NoReboot
+	// parameter to true in the API request, or by using the --no-reboot option
+	// in the CLI, we can't guarantee the file system integrity of the created image.
+	//
+	// Default: false (follow standard reboot process)
 	NoReboot *bool `locationName:"noReboot" type:"boolean"`
 
 	// The tags to apply to the AMI and snapshots on creation. You can tag the AMI,
@@ -63334,7 +63310,7 @@ type CreateKeyPairInput struct {
 	KeyName *string `type:"string" required:"true"`
 
 	// The type of key pair. Note that ED25519 keys are not supported for Windows
-	// instances, EC2 Instance Connect, and EC2 Serial Console.
+	// instances.
 	//
 	// Default: rsa
 	KeyType *string `type:"string" enum:"KeyType"`
@@ -69718,7 +69694,7 @@ type CreateVpcEndpointServiceConfigurationInput struct {
 	_ struct{} `type:"structure"`
 
 	// Indicates whether requests from service consumers to create an endpoint to
-	// your service must be accepted. To accept a request, use AcceptVpcEndpointConnections.
+	// your service must be accepted manually.
 	AcceptanceRequired *bool `type:"boolean"`
 
 	// Unique, case-sensitive identifier that you provide to ensure the idempotency
@@ -82615,6 +82591,11 @@ type DescribeImagesInput struct {
 	//    * block-device-mapping.encrypted - A Boolean that indicates whether the
 	//    Amazon EBS volume is encrypted.
 	//
+	//    * creation-date - The time when the image was created, in the ISO 8601
+	//    format in the UTC time zone (YYYY-MM-DDThh:mm:ss.sssZ), for example, 2021-09-29T11:04:43.305Z.
+	//    You can use a wildcard (*), for example, 2021-09-29T*, which matches an
+	//    entire day.
+	//
 	//    * description - The description of the image (provided during image creation).
 	//
 	//    * ena-support - A Boolean that indicates whether enhanced networking with
@@ -86252,9 +86233,6 @@ type DescribeLocalGatewayVirtualInterfacesInput struct {
 	//    * local-gateway-id - The ID of the local gateway.
 	//
 	//    * local-gateway-virtual-interface-id - The ID of the virtual interface.
-	//
-	//    * local-gateway-virtual-interface-group-id - The ID of the virtual interface
-	//    group.
 	//
 	//    * owner-id - The ID of the Amazon Web Services account that owns the local
 	//    gateway virtual interface.
@@ -99700,6 +99678,9 @@ type EbsBlockDevice struct {
 	KmsKeyId *string `type:"string"`
 
 	// The ARN of the Outpost on which the snapshot is stored.
+	//
+	// This parameter is only supported on BlockDeviceMapping objects called by
+	// CreateImage (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateImage.html).
 	OutpostArn *string `locationName:"outpostArn" type:"string"`
 
 	// The ID of the snapshot.
@@ -135959,10 +135940,7 @@ func (s *PrivateDnsDetails) SetPrivateDnsName(v string) *PrivateDnsDetails {
 	return s
 }
 
-// Information about the private DNS name for the service endpoint. For more
-// information about these parameters, see VPC Endpoint Service Private DNS
-// Name Verification (https://docs.aws.amazon.com/vpc/latest/userguide/ndpoint-services-dns-validation.html)
-// in the Amazon Virtual Private Cloud User Guide.
+// Information about the private DNS name for the service endpoint.
 type PrivateDnsNameConfiguration struct {
 	_ struct{} `type:"structure"`
 
@@ -140321,6 +140299,8 @@ func (s *RequestIpamResourceTag) SetValue(v string) *RequestIpamResourceTag {
 }
 
 // The information to include in the launch template.
+//
+// You must specify at least one parameter for the launch template data.
 type RequestLaunchTemplateData struct {
 	_ struct{} `type:"structure"`
 
@@ -145103,8 +145083,8 @@ type RunInstancesInput struct {
 	// created, see CreateTags (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTags.html).
 	TagSpecifications []*TagSpecification `locationName:"TagSpecification" locationNameList:"item" type:"list"`
 
-	// The user data to make available to the instance. For more information, see
-	// Run commands on your Linux instance at launch (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html)
+	// The user data script to make available to the instance. For more information,
+	// see Run commands on your Linux instance at launch (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html)
 	// and Run commands on your Windows instance at launch (https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ec2-windows-user-data.html).
 	// If you are using a command line tool, base64-encoding is performed for you,
 	// and you can load the text from a file. Otherwise, you must provide base64-encoded
