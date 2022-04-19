@@ -15,6 +15,7 @@ import (
 	"github.com/osbuild/osbuild-composer/internal/blueprint"
 	"github.com/osbuild/osbuild-composer/internal/distro"
 	fedora "github.com/osbuild/osbuild-composer/internal/distro/fedora33"
+	"github.com/osbuild/osbuild-composer/internal/distro/rhel86"
 	"github.com/osbuild/osbuild-composer/internal/rpmmd"
 	"github.com/osbuild/osbuild-composer/internal/test"
 )
@@ -91,6 +92,54 @@ func TestCrossArchDepsolve(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+// This test loads all the repositories available in /repositories directory
+// and tries to run chain-depsolve for one architecture.
+func TestChainDepsolve(t *testing.T) {
+	// Load repositories from the definition we provide in the RPM package
+	repoDir := "/usr/share/tests/osbuild-composer"
+
+	// NOTE: we can add RHEL, but don't make it hard requirement because it will fail outside of VPN
+	for _, distroStruct := range []distro.Distro{rhel86.NewCentos()} {
+		t.Run(distroStruct.Name(), func(t *testing.T) {
+
+			// Run tests in parallel to speed up run times.
+			t.Parallel()
+
+			// Set up temporary directory for rpm/dnf cache
+			dir := t.TempDir()
+
+			// use a fullpath to dnf-json, this allows this test to have an arbitrary
+			// working directory
+			rpm := rpmmd.NewRPMMD(dir)
+
+			repos, err := rpmmd.LoadRepositories([]string{repoDir}, distroStruct.Name())
+			require.NoErrorf(t, err, "Failed to LoadRepositories %v", distroStruct.Name())
+			x86Repos, ok := repos[distro.X86_64ArchName]
+			require.Truef(t, ok, "failed to get %q repos for %q", distro.X86_64ArchName, distroStruct.Name())
+
+			x86Arch, err := distroStruct.GetArch(distro.X86_64ArchName)
+			require.Nilf(t, err, "failed to get %q arch of %q distro", distro.X86_64ArchName, distroStruct.Name())
+
+			qcow2ImageTypeName := "qcow2"
+			qcow2Image, err := x86Arch.GetImageType(qcow2ImageTypeName)
+			require.Nilf(t, err, "failed to get %q image type of %q/%q distro/arch", qcow2ImageTypeName, distroStruct.Name(), distro.X86_64ArchName)
+
+			imagePkgSets := qcow2Image.PackageSets(blueprint.Blueprint{Packages: []blueprint.Package{{Name: "bind"}}})
+
+			require.Containsf(t, imagePkgSets, "blueprint", "the %q image package sets don't contain 'blueprint' package set", qcow2ImageTypeName)
+			require.Containsf(t, imagePkgSets, "packages", "the %q image package sets don't contain 'packages' package set", qcow2ImageTypeName)
+
+			chainPkgSets, chainRepos, err := rpmmd.ChainPackageSets([]string{"os", "blueprint"}, imagePkgSets, x86Repos, nil)
+			require.Nilf(t, err, "failed to create chained package sets for depsolving")
+			require.NotNil(t, chainPkgSets)
+			require.NotNil(t, chainRepos)
+
+			_, _, err = rpm.ChainDepsolve(chainPkgSets, chainRepos, distroStruct.ModulePlatformID(), x86Arch.Name(), distroStruct.Releasever())
+			require.Nil(t, err)
 		})
 	}
 }

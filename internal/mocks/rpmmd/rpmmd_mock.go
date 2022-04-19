@@ -39,3 +39,7 @@ func (r *rpmmdMock) FetchMetadata(repos []rpmmd.RepoConfig, modulePlatformID, ar
 func (r *rpmmdMock) Depsolve(packageSet rpmmd.PackageSet, repos []rpmmd.RepoConfig, modulePlatformID, arch, releasever string) ([]rpmmd.PackageSpec, map[string]string, error) {
 	return r.Fixture.depsolve.ret, r.Fixture.fetchPackageList.checksums, r.Fixture.depsolve.err
 }
+
+func (r *rpmmdMock) ChainDepsolve(transactions []rpmmd.ChainPackageSet, repos []rpmmd.RepoConfig, modulePlatformID, arch, releasever string) ([]rpmmd.PackageSpec, map[string]string, error) {
+	return r.Fixture.depsolve.ret, r.Fixture.fetchPackageList.checksums, r.Fixture.depsolve.err
+}
