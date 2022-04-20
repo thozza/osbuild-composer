@@ -19,6 +19,22 @@ import (
 	"github.com/osbuild/osbuild-composer/internal/rpmmd"
 )
 
+const (
+	// package set names
+
+	// build package set name
+	buildPkgsKey = "build-packages"
+
+	// main/common os image package set name
+	osPkgsKey = "packages"
+
+	// container package set name
+	containerPkgsKey = "container"
+
+	// installer package set name
+	installerPkgsKey = "installer"
+)
+
 const defaultName = "rhel-84"
 const defaultCentosName = "centos-8"
 const releaseVersion = "8"
@@ -261,11 +277,11 @@ func (t *imageType) BuildPackages() []string {
 func (t *imageType) PackageSets(bp blueprint.Blueprint) map[string]rpmmd.PackageSet {
 	includePackages, excludePackages := t.Packages(bp)
 	return map[string]rpmmd.PackageSet{
-		"packages": {
+		osPkgsKey: {
 			Include: includePackages,
 			Exclude: excludePackages,
 		},
-		"build-packages": {
+		buildPkgsKey: {
 			Include: t.BuildPackages(),
 		},
 	}
@@ -288,7 +304,7 @@ func (t *imageType) PayloadPipelines() []string {
 }
 
 func (t *imageType) PayloadPackageSets() []string {
-	return []string{"packages"}
+	return []string{osPkgsKey}
 }
 
 func (t *imageType) Exports() []string {
@@ -308,14 +324,14 @@ func (t *imageType) Manifest(c *blueprint.Customizations,
 	// math/rand is good enough in this case
 	/* #nosec G404 */
 	rng := rand.New(source)
-	pipeline, err := t.pipeline(c, options, repos, packageSpecSets["packages"], packageSpecSets["build-packages"], rng)
+	pipeline, err := t.pipeline(c, options, repos, packageSpecSets[osPkgsKey], packageSpecSets[buildPkgsKey], rng)
 	if err != nil {
 		return distro.Manifest{}, err
 	}
 
 	return json.Marshal(
 		osbuild.Manifest{
-			Sources:  *sources(append(packageSpecSets["packages"], packageSpecSets["build-packages"]...)),
+			Sources:  *sources(append(packageSpecSets[osPkgsKey], packageSpecSets[buildPkgsKey]...)),
 			Pipeline: *pipeline,
 		},
 	)
@@ -1295,11 +1311,11 @@ func newDistro(name, modulePlatformID, ostreeRef string, isCentos bool) distro.D
 		filename: "rhel84-container.tar",
 		mimeType: "application/x-tar",
 		packageSets: map[string]rpmmd.PackageSet{
-			"packages": {
+			osPkgsKey: {
 				Include: edgeImgTypeX86_64.packages,
 				Exclude: edgeImgTypeX86_64.excludedPackages,
 			},
-			"container": {Include: []string{"httpd"}},
+			containerPkgsKey: {Include: []string{"httpd"}},
 		},
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"ostree-tree", "ostree-commit", "container-tree", "assembler"},
@@ -1517,14 +1533,14 @@ func newDistro(name, modulePlatformID, ostreeRef string, isCentos bool) distro.D
 		filename: "rhel84-boot.iso",
 		mimeType: "application/x-iso9660-image",
 		packageSets: map[string]rpmmd.PackageSet{
-			"build": {
+			buildPkgsKey: {
 				Include: edgeBuildPkgs,
 			},
-			"packages": {
+			osPkgsKey: {
 				Include: edgeImgTypeX86_64.packages,
 				Exclude: edgeImgTypeX86_64.excludedPackages,
 			},
-			"installer": {Include: edgeInstallerPkgs},
+			installerPkgsKey: {Include: edgeInstallerPkgs},
 		},
 		enabledServices:  edgeImgTypeX86_64.enabledServices,
 		rpmOstree:        true,
@@ -1540,11 +1556,11 @@ func newDistro(name, modulePlatformID, ostreeRef string, isCentos bool) distro.D
 		filename: "rhel84-container.tar",
 		mimeType: "application/x-tar",
 		packageSets: map[string]rpmmd.PackageSet{
-			"packages": {
+			osPkgsKey: {
 				Include: edgeImgTypeAarch64.packages,
 				Exclude: edgeImgTypeAarch64.excludedPackages,
 			},
-			"container": {Include: []string{"httpd"}},
+			containerPkgsKey: {Include: []string{"httpd"}},
 		},
 		enabledServices:  edgeImgTypeAarch64.enabledServices,
 		rpmOstree:        true,
@@ -1564,7 +1580,7 @@ func newDistro(name, modulePlatformID, ostreeRef string, isCentos bool) distro.D
 		filename: "image.tar.gz",
 		mimeType: "application/gzip",
 		packageSets: map[string]rpmmd.PackageSet{
-			"packages": getGcePackageSet(),
+			osPkgsKey: getGcePackageSet(),
 		},
 		kernelOptions:           "net.ifnames=0 biosdevname=0 scsi_mod.use_blk_mq=Y crashkernel=auto console=ttyS0,38400n8d",
 		bootable:                true,
@@ -1581,7 +1597,7 @@ func newDistro(name, modulePlatformID, ostreeRef string, isCentos bool) distro.D
 		filename: "image.tar.gz",
 		mimeType: "application/gzip",
 		packageSets: map[string]rpmmd.PackageSet{
-			"packages": getGceRhuiPackageSet(),
+			osPkgsKey: getGceRhuiPackageSet(),
 		},
 		kernelOptions:           "net.ifnames=0 biosdevname=0 scsi_mod.use_blk_mq=Y crashkernel=auto console=ttyS0,38400n8d",
 		bootable:                true,

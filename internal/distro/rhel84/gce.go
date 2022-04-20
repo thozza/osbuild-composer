@@ -100,21 +100,21 @@ func getGceRhuiPackageSet() rpmmd.PackageSet {
 // gcePipelinesRhel86 is a slightly modified RHEL-86 version of gcePipelines() function
 func gcePipelinesRhel86(t *imageTypeS2, imageConfig *distro.ImageConfig, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	pipelines := make([]osbuild.Pipeline, 0)
-	pipelines = append(pipelines, *t.buildPipeline(repos, packageSetSpecs["build-packages"]))
+	pipelines = append(pipelines, *t.buildPipeline(repos, packageSetSpecs[buildPkgsKey]))
 
 	partitionTable, err := t.getPartitionTable(options, rng)
 	if err != nil {
 		return nil, err
 	}
 
-	treePipeline, err := osPipelineRhel86(t, imageConfig, repos, packageSetSpecs["packages"], customizations, options, partitionTable)
+	treePipeline, err := osPipelineRhel86(t, imageConfig, repos, packageSetSpecs[osPkgsKey], customizations, options, partitionTable)
 	if err != nil {
 		return nil, err
 	}
 	pipelines = append(pipelines, *treePipeline)
 
 	diskfile := "disk.raw"
-	kernelVer, err := rpmmd.GetVerStrFromPackageSpecList(packageSetSpecs["packages"], customizations.GetKernel().Name)
+	kernelVer, err := rpmmd.GetVerStrFromPackageSpecList(packageSetSpecs[osPkgsKey], customizations.GetKernel().Name)
 	if err != nil {
 		panic(fmt.Sprintf("kernel package %q not found", customizations.GetKernel().Name))
 	}
