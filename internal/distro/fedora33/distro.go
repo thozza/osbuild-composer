@@ -16,6 +16,16 @@ import (
 	"github.com/osbuild/osbuild-composer/internal/rpmmd"
 )
 
+const (
+	// package set names
+
+	// build package set name
+	buildPkgsKey = "build-packages"
+
+	// main/common os image package set name
+	osPkgsKey = "packages"
+)
+
 const nameTmpl = "fedora-%s"
 const modulePlatformIDTmpl = "platform:f%s"
 
@@ -231,11 +241,11 @@ func (t *imageType) BuildPackages() []string {
 func (t *imageType) PackageSets(bp blueprint.Blueprint) map[string]rpmmd.PackageSet {
 	includePackages, excludePackages := t.Packages(bp)
 	return map[string]rpmmd.PackageSet{
-		"packages": {
+		osPkgsKey: {
 			Include: includePackages,
 			Exclude: excludePackages,
 		},
-		"build-packages": {
+		buildPkgsKey: {
 			Include: t.BuildPackages(),
 		},
 	}
@@ -250,7 +260,7 @@ func (t *imageType) PayloadPipelines() []string {
 }
 
 func (t *imageType) PayloadPackageSets() []string {
-	return []string{"packages"}
+	return []string{osPkgsKey}
 }
 
 func (t *imageType) PackageSetsChains() map[string][]string {
@@ -266,14 +276,14 @@ func (t *imageType) Manifest(c *blueprint.Customizations,
 	repos []rpmmd.RepoConfig,
 	packageSpecSets map[string][]rpmmd.PackageSpec,
 	seed int64) (distro.Manifest, error) {
-	pipeline, err := t.pipeline(c, options, repos, packageSpecSets["packages"], packageSpecSets["build-packages"])
+	pipeline, err := t.pipeline(c, options, repos, packageSpecSets[osPkgsKey], packageSpecSets[buildPkgsKey])
 	if err != nil {
 		return distro.Manifest{}, err
 	}
 
 	return json.Marshal(
 		osbuild.Manifest{
-			Sources:  *sources(append(packageSpecSets["packages"], packageSpecSets["build-packages"]...)),
+			Sources:  *sources(append(packageSpecSets[osPkgsKey], packageSpecSets[buildPkgsKey]...)),
 			Pipeline: *pipeline,
 		},
 	)
