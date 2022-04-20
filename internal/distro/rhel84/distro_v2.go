@@ -82,7 +82,7 @@ func (t *imageTypeS2) PartitionType() string {
 }
 
 func (t *imageTypeS2) Packages(bp blueprint.Blueprint) ([]string, []string) {
-	packages := append(t.packageSets["packages"].Include, bp.GetPackages()...)
+	packages := append(t.packageSets[osPkgsKey].Include, bp.GetPackages()...)
 	timezone, _ := bp.Customizations.GetTimezoneSettings()
 	if timezone != nil {
 		packages = append(packages, "chrony")
@@ -93,7 +93,7 @@ func (t *imageTypeS2) Packages(bp blueprint.Blueprint) ([]string, []string) {
 	// will not handle the issue with dependencies present in
 	// the list of excluded packages, but it will create a
 	// possibility of a workaround at least)
-	excludedPackages := append([]string(nil), t.packageSets["packages"].Exclude...)
+	excludedPackages := append([]string(nil), t.packageSets[osPkgsKey].Exclude...)
 	for _, pkg := range bp.GetPackages() {
 		// removePackage is fine if the package doesn't exist
 		excludedPackages = removePackage(excludedPackages, pkg)
@@ -108,19 +108,19 @@ func (t *imageTypeS2) BuildPackages() []string {
 		buildPackages = append(buildPackages, "rpm-ostree")
 	}
 	if t.bootISO {
-		buildPackages = append(buildPackages, t.packageSets["build"].Include...)
+		buildPackages = append(buildPackages, t.packageSets[buildPkgsKey].Include...)
 	}
 	return buildPackages
 }
 
 func (t *imageTypeS2) PackageSets(bp blueprint.Blueprint) map[string]rpmmd.PackageSet {
 	sets := map[string]rpmmd.PackageSet{
-		"build-packages": {
+		buildPkgsKey: {
 			Include: t.BuildPackages(),
 		},
 	}
 	for name, pkgSet := range t.packageSets {
-		if name == "packages" {
+		if name == osPkgsKey {
 			// treat base packages separately to combine with blueprint
 			packages := new(rpmmd.PackageSet)
 			packages.Include, packages.Exclude = t.Packages(bp)
@@ -141,7 +141,7 @@ func (t *imageTypeS2) PayloadPipelines() []string {
 }
 
 func (t *imageTypeS2) PayloadPackageSets() []string {
-	return []string{"packages"}
+	return []string{osPkgsKey}
 }
 
 func (t *imageTypeS2) PackageSetsChains() map[string][]string {
@@ -233,11 +233,11 @@ func (t *imageTypeS2) sources(packages []rpmmd.PackageSpec, ostreeCommits []ostr
 func edgePipelines(t *imageTypeS2, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	pipelines := make([]osbuild.Pipeline, 0)
 
-	pipelines = append(pipelines, *t.buildPipeline(repos, packageSetSpecs["build-packages"]))
+	pipelines = append(pipelines, *t.buildPipeline(repos, packageSetSpecs[buildPkgsKey]))
 
 	if t.bootISO {
 		var kernelPkg *rpmmd.PackageSpec
-		installerPackages := packageSetSpecs["installer"]
+		installerPackages := packageSetSpecs[installerPkgsKey]
 		for idx := range installerPackages {
 			pkg := installerPackages[idx]
 			if pkg.Name == "kernel" {
@@ -249,7 +249,7 @@ func edgePipelines(t *imageTypeS2, customizations *blueprint.Customizations, opt
 			panic("kernel package not found in installer package set; this is a programming error")
 		}
 		kernelVer := fmt.Sprintf("%s-%s.%s", kernelPkg.Version, kernelPkg.Release, kernelPkg.Arch)
-		anacondaPipeline, err := t.anacondaTreePipeline(repos, customizations, packageSetSpecs["installer"], options, kernelVer)
+		anacondaPipeline, err := t.anacondaTreePipeline(repos, customizations, packageSetSpecs[installerPkgsKey], options, kernelVer)
 		if err != nil {
 			return nil, err
 		}
@@ -257,13 +257,13 @@ func edgePipelines(t *imageTypeS2, customizations *blueprint.Customizations, opt
 		pipelines = append(pipelines, *t.bootISOTreePipeline(kernelVer))
 		pipelines = append(pipelines, *t.bootISOPipeline())
 	} else {
-		treePipeline, err := t.ostreeTreePipeline(repos, packageSetSpecs["packages"], customizations)
+		treePipeline, err := t.ostreeTreePipeline(repos, packageSetSpecs[osPkgsKey], customizations)
 		if err != nil {
 			return nil, err
 		}
 		pipelines = append(pipelines, *treePipeline)
 		pipelines = append(pipelines, *t.ostreeCommitPipeline(options))
-		pipelines = append(pipelines, *t.containerTreePipeline(repos, packageSetSpecs["container"], options, customizations))
+		pipelines = append(pipelines, *t.containerTreePipeline(repos, packageSetSpecs[containerPkgsKey], options, customizations))
 		pipelines = append(pipelines, *t.containerPipeline())
 	}
 
