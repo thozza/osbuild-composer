@@ -267,7 +267,7 @@ func (t *imageType) Manifest(c *blueprint.Customizations,
 	repos []rpmmd.RepoConfig,
 	packageSpecSets map[string][]rpmmd.PackageSpec,
 	seed int64) (distro.Manifest, error) {
-	pipeline, err := t.pipeline(c, options, repos, packageSpecSets[osPkgsKey], packageSpecSets[buildPkgsKey])
+	pipeline, err := t.pipeline(c, options, repos, packageSpecSets)
 	if err != nil {
 		return distro.Manifest{}, err
 	}
@@ -316,7 +316,7 @@ func sources(packages []rpmmd.PackageSpec) *osbuild.Sources {
 	}
 }
 
-func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSpecs, buildPackageSpecs []rpmmd.PackageSpec) (*osbuild.Pipeline, error) {
+func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSpecSets map[string][]rpmmd.PackageSpec) (*osbuild.Pipeline, error) {
 
 	// if options.Size is 0, this will be the default size of the image type
 	imageSize := t.Size(options.Size)
@@ -350,7 +350,7 @@ func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOp
 	}
 
 	p := &osbuild.Pipeline{}
-	p.SetBuild(t.buildPipeline(repos, *t.arch, buildPackageSpecs), "org.osbuild.rhel82")
+	p.SetBuild(t.buildPipeline(repos, *t.arch, packageSpecSets[buildPkgsKey]), "org.osbuild.rhel82")
 
 	if t.arch.Name() == "s390x" {
 		p.AddStage(osbuild.NewKernelCmdlineStage(&osbuild.KernelCmdlineStageOptions{
@@ -359,7 +359,7 @@ func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOp
 		}))
 	}
 
-	p.AddStage(osbuild.NewRPMStage(t.rpmStageOptions(*t.arch, repos, packageSpecs)))
+	p.AddStage(osbuild.NewRPMStage(t.rpmStageOptions(*t.arch, repos, packageSpecSets[osPkgsKey])))
 	p.AddStage(osbuild.NewFixBLSStage())
 
 	if t.bootable {
