@@ -1,6 +1,7 @@
 package rhel84_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -677,5 +678,30 @@ func TestDistro_TestRootMountPoint(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// Ensure that all package sets defined in the package set chains are defined for the image type
+func TestImageType_PackageSetChains(t *testing.T) {
+	d := rhel84.New()
+	t.Parallel()
+
+	for _, archName := range d.ListArches() {
+		arch, err := d.GetArch(archName)
+		require.Nil(t, err)
+		for _, imageTypeName := range arch.ListImageTypes() {
+			t.Run(fmt.Sprintf("%s/%s", archName, imageTypeName), func(t *testing.T) {
+				imageType, err := arch.GetImageType(imageTypeName)
+				require.Nil(t, err)
+
+				imagePkgSets := imageType.PackageSets(blueprint.Blueprint{})
+				for _, pkgSetChain := range imageType.PackageSetChains() {
+					for _, packageSetName := range pkgSetChain {
+						_, ok := imagePkgSets[packageSetName]
+						assert.Truef(t, ok, "package set %q defined in a package set chain is not present in the image package sets", packageSetName)
+					}
+				}
+			})
+		}
 	}
 }

@@ -144,6 +144,10 @@ func (t *imageTypeS2) PayloadPackageSets() []string {
 	return []string{osPkgsKey}
 }
 
+func (t *imageTypeS2) PackageSetChains() map[string][]string {
+	return map[string][]string{}
+}
+
 func (t *imageTypeS2) Exports() []string {
 	return t.exports
 }

@@ -263,6 +263,10 @@ func (t *imageType) PayloadPackageSets() []string {
 	return []string{osPkgsKey}
 }
 
+func (t *imageType) PackageSetChains() map[string][]string {
+	return map[string][]string{}
+}
+
 func (t *imageType) Exports() []string {
 	return distro.ExportsFallback()
 }

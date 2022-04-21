@@ -196,6 +196,10 @@ func (t *TestImageType) PayloadPackageSets() []string {
 	return []string{}
 }
 
+func (t *TestImageType) PackageSetChains() map[string][]string {
+	return map[string][]string{}
+}
+
 func (t *TestImageType) Exports() []string {
 	return distro.ExportsFallback()
 }
