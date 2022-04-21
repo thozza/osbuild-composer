@@ -324,7 +324,7 @@ func (t *imageType) Manifest(c *blueprint.Customizations,
 	// math/rand is good enough in this case
 	/* #nosec G404 */
 	rng := rand.New(source)
-	pipeline, err := t.pipeline(c, options, repos, packageSpecSets[osPkgsKey], packageSpecSets[buildPkgsKey], rng)
+	pipeline, err := t.pipeline(c, options, repos, packageSpecSets, rng)
 	if err != nil {
 		return distro.Manifest{}, err
 	}
@@ -377,7 +377,7 @@ func sources(packages []rpmmd.PackageSpec) *osbuild.Sources {
 	}
 }
 
-func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSpecs, buildPackageSpecs []rpmmd.PackageSpec, rng *rand.Rand) (*osbuild.Pipeline, error) {
+func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSpecSets map[string][]rpmmd.PackageSpec, rng *rand.Rand) (*osbuild.Pipeline, error) {
 
 	imageSize := t.Size(options.Size)
 
@@ -414,9 +414,9 @@ func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOp
 
 	p := &osbuild.Pipeline{}
 	if t.arch.distro.isCentos {
-		p.SetBuild(t.buildPipeline(repos, *t.arch, buildPackageSpecs), "org.osbuild.centos8")
+		p.SetBuild(t.buildPipeline(repos, *t.arch, packageSpecSets[buildPkgsKey]), "org.osbuild.centos8")
 	} else {
-		p.SetBuild(t.buildPipeline(repos, *t.arch, buildPackageSpecs), "org.osbuild.rhel84")
+		p.SetBuild(t.buildPipeline(repos, *t.arch, packageSpecSets[buildPkgsKey]), "org.osbuild.rhel84")
 	}
 
 	if t.arch.Name() == "s390x" {
@@ -435,7 +435,7 @@ func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOp
 		}))
 	}
 
-	p.AddStage(osbuild.NewRPMStage(t.rpmStageOptions(*t.arch, repos, packageSpecs)))
+	p.AddStage(osbuild.NewRPMStage(t.rpmStageOptions(*t.arch, repos, packageSpecSets[osPkgsKey])))
 	p.AddStage(osbuild.NewFixBLSStage())
 
 	if pt != nil {
@@ -444,7 +444,7 @@ func (t *imageType) pipeline(c *blueprint.Customizations, options distro.ImageOp
 
 	if t.bootable {
 		if t.arch.Name() != "s390x" {
-			p.AddStage(osbuild.NewGRUB2Stage(t.grub2StageOptions(pt, t.kernelOptions, c.GetKernel(), packageSpecs, t.arch.uefi, t.arch.legacy)))
+			p.AddStage(osbuild.NewGRUB2Stage(t.grub2StageOptions(pt, t.kernelOptions, c.GetKernel(), packageSpecSets[osPkgsKey], t.arch.uefi, t.arch.legacy)))
 		}
 	}
 
