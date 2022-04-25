@@ -13,6 +13,7 @@ type fetchPackageList struct {
 }
 type depsolve struct {
 	ret       []rpmmd.PackageSpec
+	retSets   map[string][]rpmmd.PackageSpec
 	checksums map[string]string
 	err       error
 }
@@ -42,4 +43,8 @@ func (r *rpmmdMock) Depsolve(packageSet rpmmd.PackageSet, repos []rpmmd.RepoConf
 
 func (r *rpmmdMock) ChainDepsolve(transactions []rpmmd.ChainPackageSet, repos []rpmmd.RepoConfig, modulePlatformID, arch, releasever string) ([]rpmmd.PackageSpec, map[string]string, error) {
 	return r.Fixture.depsolve.ret, r.Fixture.fetchPackageList.checksums, r.Fixture.depsolve.err
+}
+
+func (r *rpmmdMock) DepsolvePackageSets(packageSetsChains map[string][]string, packageSets map[string]rpmmd.PackageSet, repos []rpmmd.RepoConfig, packageSetsRepos map[string][]rpmmd.RepoConfig, modulePlatformID, arch, releasever string) (map[string][]rpmmd.PackageSpec, error) {
+	return r.Fixture.depsolve.retSets, r.Fixture.depsolve.err
 }
