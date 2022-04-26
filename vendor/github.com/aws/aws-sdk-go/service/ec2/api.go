@@ -45629,6 +45629,11 @@ func (c *EC2) RequestSpotFleetRequest(input *RequestSpotFleetInput) (req *reques
 // For more information, see Spot Fleet requests (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html)
 // in the Amazon EC2 User Guide for Linux Instances.
 //
+// We strongly discourage using the RequestSpotFleet API because it is a legacy
+// API with no planned investment. For options for requesting Spot Instances,
+// see Which is the best Spot request method to use? (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-best-practices.html#which-spot-request-method-to-use)
+// in the Amazon EC2 User Guide for Linux Instances.
+//
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
@@ -45704,6 +45709,11 @@ func (c *EC2) RequestSpotInstancesRequest(input *RequestSpotInstancesInput) (req
 // Creates a Spot Instance request.
 //
 // For more information, see Spot Instance requests (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html)
+// in the Amazon EC2 User Guide for Linux Instances.
+//
+// We strongly discourage using the RequestSpotInstances API because it is a
+// legacy API with no planned investment. For options for requesting Spot Instances,
+// see Which is the best Spot request method to use? (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-best-practices.html#which-spot-request-method-to-use)
 // in the Amazon EC2 User Guide for Linux Instances.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -63378,7 +63388,11 @@ func (s *CreateKeyPairInput) SetTagSpecifications(v []*TagSpecification) *Create
 type CreateKeyPairOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The SHA-1 digest of the DER encoded private key.
+	//    * For RSA key pairs, the key fingerprint is the SHA-1 digest of the DER
+	//    encoded private key.
+	//
+	//    * For ED25519 key pairs, the key fingerprint is the base64-encoded SHA-256
+	//    digest, which is the default for OpenSSH, starting with OpenSSH 6.8.
 	KeyFingerprint *string `locationName:"keyFingerprint" type:"string"`
 
 	// An unencrypted PEM encoded RSA or ED25519 private key.
@@ -84191,6 +84205,9 @@ type DescribeInstancesInput struct {
 	//
 	//    * block-device-mapping.volume-id - The volume ID of the EBS volume.
 	//
+	//    * capacity-reservation-id - The ID of the Capacity Reservation into which
+	//    the instance was launched.
+	//
 	//    * client-token - The idempotency token you provided when you launched
 	//    the instance.
 	//
@@ -91428,7 +91445,7 @@ type DescribeSpotInstanceRequestsInput struct {
 	//    * state - The state of the Spot Instance request (open | active | closed
 	//    | cancelled | failed). Spot request status information can help you track
 	//    your Amazon EC2 Spot Instance requests. For more information, see Spot
-	//    request status (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-bid-status.html)
+	//    request status (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-request-status.html)
 	//    in the Amazon EC2 User Guide for Linux Instances.
 	//
 	//    * status-code - The short code describing the most recent evaluation of
@@ -112750,7 +112767,11 @@ func (s *ImportKeyPairInput) SetTagSpecifications(v []*TagSpecification) *Import
 type ImportKeyPairOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The MD5 public key fingerprint as specified in section 4 of RFC 4716.
+	//    * For RSA key pairs, the key fingerprint is the MD5 public key fingerprint
+	//    as specified in section 4 of RFC 4716.
+	//
+	//    * For ED25519 key pairs, the key fingerprint is the base64-encoded SHA-256
+	//    digest, which is the default for OpenSSH, starting with OpenSSH 6.8 (http://www.openssh.com/txt/release-6.8).
 	KeyFingerprint *string `locationName:"keyFingerprint" type:"string"`
 
 	// The key pair name that you provided.
@@ -119603,7 +119624,7 @@ type LaunchSpecification struct {
 	// The ID of the AMI.
 	ImageId *string `locationName:"imageId" type:"string"`
 
-	// The instance type.
+	// The instance type. Only one instance type can be specified.
 	InstanceType *string `locationName:"instanceType" type:"string" enum:"InstanceType"`
 
 	// The ID of the kernel.
@@ -128488,11 +128509,11 @@ type ModifySubnetAttributeInput struct {
 	// in the specified subnet should be assigned a public IPv4 address.
 	MapPublicIpOnLaunch *AttributeBooleanValue `type:"structure"`
 
-	// The type of hostnames to assign to instances in the subnet at launch. For
-	// IPv4 only subnets, an instance DNS name must be based on the instance IPv4
-	// address. For IPv6 only subnets, an instance DNS name must be based on the
-	// instance ID. For dual-stack subnets, you can specify whether DNS names use
-	// the instance IPv4 address or the instance ID.
+	// The type of hostname to assign to instances in the subnet at launch. For
+	// IPv4-only and dual-stack (IPv4 and IPv6) subnets, an instance DNS name can
+	// be based on the instance IPv4 address (ip-name) or the instance ID (resource-name).
+	// For IPv6 only subnets, an instance DNS name must be based on the instance
+	// ID (resource-name).
 	PrivateDnsHostnameTypeOnLaunch *string `type:"string" enum:"HostnameType"`
 
 	// The ID of the subnet.
@@ -141059,7 +141080,7 @@ type RequestSpotLaunchSpecification struct {
 	// The ID of the AMI.
 	ImageId *string `locationName:"imageId" type:"string"`
 
-	// The instance type.
+	// The instance type. Only one instance type can be specified.
 	InstanceType *string `locationName:"instanceType" type:"string" enum:"InstanceType"`
 
 	// The ID of the kernel.
@@ -145089,7 +145110,11 @@ type RunInstancesInput struct {
 	// If you are using a command line tool, base64-encoding is performed for you,
 	// and you can load the text from a file. Otherwise, you must provide base64-encoded
 	// text. User data is limited to 16 KB.
-	UserData *string `type:"string"`
+	//
+	// UserData is a sensitive parameter and its value will be
+	// replaced with "sensitive" in string returned by RunInstancesInput's
+	// String and GoString methods.
+	UserData *string `type:"string" sensitive:"true"`
 }
 
 // String returns the string representation.
@@ -150089,8 +150114,9 @@ type SpotInstanceRequest struct {
 	// The maximum price per hour that you are willing to pay for a Spot Instance.
 	SpotPrice *string `locationName:"spotPrice" type:"string"`
 
-	// The state of the Spot Instance request. Spot status information helps track
-	// your Spot Instance requests. For more information, see Spot status (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-bid-status.html)
+	// The state of the Spot Instance request. Spot request status information helps
+	// track your Spot Instance requests. For more information, see Spot request
+	// status (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-request-status.html)
 	// in the Amazon EC2 User Guide for Linux Instances.
 	State *string `locationName:"state" type:"string" enum:"SpotInstanceState"`
 
@@ -150297,7 +150323,8 @@ func (s *SpotInstanceStateFault) SetMessage(v string) *SpotInstanceStateFault {
 type SpotInstanceStatus struct {
 	_ struct{} `type:"structure"`
 
-	// The status code. For a list of status codes, see Spot status codes (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-bid-status.html#spot-instance-bid-status-understand)
+	// The status code. For a list of status codes, see Spot request status codes
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-request-status.html#spot-instance-request-status-understand)
 	// in the Amazon EC2 User Guide for Linux Instances.
 	Code *string `locationName:"code" type:"string"`
 
