@@ -23,7 +23,7 @@ const (
 	// package set names
 
 	// build package set name
-	buildPkgsKey = "build-packages"
+	buildPkgsKey = "build"
 
 	// main/common os image package set name
 	osPkgsKey = "packages"
