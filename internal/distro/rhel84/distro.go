@@ -33,6 +33,9 @@ const (
 
 	// installer package set name
 	installerPkgsKey = "installer"
+
+	// blueprint package set name
+	blueprintPkgsKey = "blueprint"
 )
 
 const defaultName = "rhel-84"
@@ -237,35 +240,6 @@ func (t *imageType) PartitionType() string {
 	return ""
 }
 
-func (t *imageType) Packages(bp blueprint.Blueprint) ([]string, []string) {
-	packages := append(t.packages, bp.GetPackages()...)
-	timezone, _ := bp.Customizations.GetTimezoneSettings()
-	if timezone != nil {
-		packages = append(packages, "chrony")
-	}
-	if t.bootable {
-		packages = append(packages, t.arch.bootloaderPackages...)
-	}
-
-	if t.arch.distro.isCentos {
-		// drop insights from centos, it's not available there
-		packages = removePackage(packages, "insights-client")
-	}
-
-	// copy the list of excluded packages from the image type
-	// and subtract any packages found in the blueprint (this
-	// will not handle the issue with dependencies present in
-	// the list of excluded packages, but it will create a
-	// possibility of a workaround at least)
-	excludedPackages := append([]string(nil), t.excludedPackages...)
-	for _, pkg := range bp.GetPackages() {
-		// removePackage is fine if the package doesn't exist
-		excludedPackages = removePackage(excludedPackages, pkg)
-	}
-
-	return packages, excludedPackages
-}
-
 func (t *imageType) BuildPackages() []string {
 	packages := append(t.arch.distro.buildPackages, t.arch.buildPackages...)
 	if t.rpmOstree {
@@ -275,14 +249,31 @@ func (t *imageType) BuildPackages() []string {
 }
 
 func (t *imageType) PackageSets(bp blueprint.Blueprint) map[string]rpmmd.PackageSet {
-	includePackages, excludePackages := t.Packages(bp)
+	bpPackages := bp.GetPackages()
+	timezone, _ := bp.Customizations.GetTimezoneSettings()
+	if timezone != nil {
+		bpPackages = append(bpPackages, "chrony")
+	}
+
+	osPackages := t.packages
+	if t.bootable {
+		osPackages = append(osPackages, t.arch.bootloaderPackages...)
+	}
+	// add bp kernel to main OS package set to avoid duplicate kernels
+	// TODO: add the kernel only to OS packages and not the Blueprint packages
+	kernel := bp.Customizations.GetKernel().Name
+	osPackages = append(osPackages, kernel)
+
 	return map[string]rpmmd.PackageSet{
 		osPkgsKey: {
-			Include: includePackages,
-			Exclude: excludePackages,
+			Include: osPackages,
+			Exclude: t.excludedPackages,
 		},
 		buildPkgsKey: {
 			Include: t.BuildPackages(),
+		},
+		blueprintPkgsKey: {
+			Include: bpPackages,
 		},
 	}
 }
@@ -308,7 +299,7 @@ func (t *imageType) PayloadPackageSets() []string {
 }
 
 func (t *imageType) PackageSetsChains() map[string][]string {
-	return map[string][]string{}
+	return map[string][]string{osPkgsKey: {osPkgsKey, blueprintPkgsKey}}
 }
 
 func (t *imageType) Exports() []string {
@@ -850,19 +841,6 @@ func newRandomUUIDFromReader(r io.Reader) (uuid.UUID, error) {
 	id[6] = (id[6] & 0x0f) | 0x40 // Version 4
 	id[8] = (id[8] & 0x3f) | 0x80 // Variant is 10
 	return id, nil
-}
-
-func removePackage(packages []string, packageToRemove string) []string {
-	for i, pkg := range packages {
-		if pkg == packageToRemove {
-			// override the package with the last one from the list
-			packages[i] = packages[len(packages)-1]
-
-			// drop the last package from the slice
-			return packages[:len(packages)-1]
-		}
-	}
-	return packages
 }
 
 // New creates a new distro object, defining the supported architectures and image types

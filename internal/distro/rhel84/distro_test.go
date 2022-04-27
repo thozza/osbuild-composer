@@ -22,10 +22,11 @@ var rhelFamilyDistros = []rhelFamilyDistro{
 		name:   "rhel",
 		distro: rhel84.New(),
 	},
-	{
-		name:   "centos",
-		distro: rhel84.NewCentos(),
-	},
+	// centos-8 defaults to RHEL-8.6. this is not useful any more
+	// {
+	// 	name:   "centos",
+	// 	distro: rhel84.NewCentos(),
+	// },
 }
 
 func TestFilenameFromType(t *testing.T) {

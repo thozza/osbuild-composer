@@ -81,27 +81,6 @@ func (t *imageTypeS2) PartitionType() string {
 	return ""
 }
 
-func (t *imageTypeS2) Packages(bp blueprint.Blueprint) ([]string, []string) {
-	packages := append(t.packageSets[osPkgsKey].Include, bp.GetPackages()...)
-	timezone, _ := bp.Customizations.GetTimezoneSettings()
-	if timezone != nil {
-		packages = append(packages, "chrony")
-	}
-
-	// copy the list of excluded packages from the image type
-	// and subtract any packages found in the blueprint (this
-	// will not handle the issue with dependencies present in
-	// the list of excluded packages, but it will create a
-	// possibility of a workaround at least)
-	excludedPackages := append([]string(nil), t.packageSets[osPkgsKey].Exclude...)
-	for _, pkg := range bp.GetPackages() {
-		// removePackage is fine if the package doesn't exist
-		excludedPackages = removePackage(excludedPackages, pkg)
-	}
-
-	return packages, excludedPackages
-}
-
 func (t *imageTypeS2) BuildPackages() []string {
 	buildPackages := append(t.arch.distro.buildPackages, t.arch.buildPackages...)
 	if t.rpmOstree {
@@ -114,22 +93,34 @@ func (t *imageTypeS2) BuildPackages() []string {
 }
 
 func (t *imageTypeS2) PackageSets(bp blueprint.Blueprint) map[string]rpmmd.PackageSet {
-	sets := map[string]rpmmd.PackageSet{
-		buildPkgsKey: {
-			Include: t.BuildPackages(),
-		},
+	// merge package sets that appear in the image type with the package sets
+	// of the same name from the distro and arch
+	mergedSets := make(map[string]rpmmd.PackageSet)
+
+	// build packages
+	mergedSets[buildPkgsKey] = rpmmd.PackageSet{
+		Include: t.BuildPackages(),
 	}
+
+	// blueprint packages
+	bpPackages := bp.GetPackages()
+	timezone, _ := bp.Customizations.GetTimezoneSettings()
+	if timezone != nil {
+		bpPackages = append(bpPackages, "chrony")
+	}
+	mergedSets[blueprintPkgsKey] = rpmmd.PackageSet{Include: bpPackages}
+
 	for name, pkgSet := range t.packageSets {
-		if name == osPkgsKey {
-			// treat base packages separately to combine with blueprint
-			packages := new(rpmmd.PackageSet)
-			packages.Include, packages.Exclude = t.Packages(bp)
-			sets[name] = *packages
-			continue
-		}
-		sets[name] = pkgSet
+		mergedSets[name] = pkgSet
 	}
-	return sets
+
+	kernel := bp.Customizations.GetKernel().Name
+
+	// add bp kernel to main OS package set to avoid duplicate kernels
+	// TODO: add the kernel only to OS packages and not the Blueprint packages
+	mergedSets[osPkgsKey] = mergedSets[osPkgsKey].Append(rpmmd.PackageSet{Include: []string{kernel}})
+
+	return mergedSets
 }
 
 func (t *imageTypeS2) BuildPipelines() []string {
@@ -145,7 +136,7 @@ func (t *imageTypeS2) PayloadPackageSets() []string {
 }
 
 func (t *imageTypeS2) PackageSetsChains() map[string][]string {
-	return map[string][]string{}
+	return map[string][]string{osPkgsKey: {osPkgsKey, blueprintPkgsKey}}
 }
 
 func (t *imageTypeS2) Exports() []string {
