@@ -2,6 +2,8 @@
 // OSBuild (schema v1) types.
 package osbuild2
 
+import "fmt"
+
 // A Manifest represents an OSBuild source and pipeline manifest
 type Manifest struct {
 	Version   string     `json:"version"`
@@ -20,6 +22,14 @@ type Pipeline struct {
 	// Sequence of stages that produce the filesystem tree, which is the
 	// payload of the produced image.
 	Stages []*Stage `json:"stages,omitempty"`
+}
+
+func NewPipeline(name, build, runner string) *Pipeline {
+	return &Pipeline{
+		Name:   fmt.Sprintf("name:%s", name),
+		Build:  fmt.Sprintf("name:%s", build),
+		Runner: runner,
+	}
 }
 
 // SetBuild sets the pipeline and runner for generating the build environment
