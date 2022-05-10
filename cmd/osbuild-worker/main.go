@@ -221,7 +221,7 @@ func main() {
 			ClientId         string `toml:"client_id"`
 			ClientSecretPath string `toml:"client_secret"`
 		} `toml:"authentication"`
-		RelaxTimeoutFactor uint   `toml:"RelaxTimeoutFactor"`
+		RelaxTimeoutFactor uint   `toml:"RelaxTimeoutFactor"` // Should be moved under 'koji' section
 		BasePath           string `toml:"base_path"`
 	}
 	var unix bool
@@ -428,14 +428,15 @@ func main() {
 	// non-depsolve job
 	jobImpls := map[string]JobImplementation{
 		"osbuild": &OSBuildJobImpl{
-			Store:          store,
-			Output:         output,
-			KojiServers:    kojiServers,
-			GCPCreds:       gcpCredentials,
-			AzureCreds:     azureCredentials,
-			AWSCreds:       awsCredentials,
-			AWSBucket:      awsBucket,
-			GenericS3Creds: genericS3Credentials,
+			Store:                  store,
+			Output:                 output,
+			KojiServers:            kojiServers,
+			KojiRelaxTimeoutFactor: config.RelaxTimeoutFactor,
+			GCPCreds:               gcpCredentials,
+			AzureCreds:             azureCredentials,
+			AWSCreds:               awsCredentials,
+			AWSBucket:              awsBucket,
+			GenericS3Creds:         genericS3Credentials,
 		},
 		"osbuild-koji": &OSBuildKojiJobImpl{
 			Store:              store,
