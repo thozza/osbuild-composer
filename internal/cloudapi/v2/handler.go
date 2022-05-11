@@ -602,11 +602,11 @@ func (h *apiHandlers) GetComposeStatus(ctx echo.Context, id string) error {
 		if err != nil {
 			return HTTPError(ErrorMalformedOSBuildJobResult)
 		}
-		var buildJobResults []worker.OSBuildKojiJobResult
+		var buildJobResults []worker.OSBuildJobResult
 		var buildJobStatuses []ImageStatus
 		for i := 1; i < len(deps); i++ {
-			var buildJobResult worker.OSBuildKojiJobResult
-			buildJobStatus, buildDeps, err := h.server.workers.OSBuildKojiJobStatus(deps[i], &buildJobResult)
+			var buildJobResult worker.OSBuildJobResult
+			buildJobStatus, buildDeps, err := h.server.workers.OSBuildJobStatus(deps[i], &buildJobResult)
 			if err != nil {
 				return HTTPError(ErrorMalformedOSBuildJobResult)
 			}
@@ -676,7 +676,7 @@ func imageStatusFromOSBuildJobStatus(js *worker.JobStatus, result *worker.OSBuil
 	return ImageStatusValueFailure
 }
 
-func imageStatusFromKojiJobStatus(js *worker.JobStatus, initResult *worker.KojiInitJobResult, buildResult *worker.OSBuildKojiJobResult) ImageStatusValue {
+func imageStatusFromKojiJobStatus(js *worker.JobStatus, initResult *worker.KojiInitJobResult, buildResult *worker.OSBuildJobResult) ImageStatusValue {
 	if js.Canceled {
 		return ImageStatusValueFailure
 	}
@@ -716,7 +716,7 @@ func composeStatusFromOSBuildJobStatus(js *worker.JobStatus, result *worker.OSBu
 	return ComposeStatusValueFailure
 }
 
-func composeStatusFromKojiJobStatus(js *worker.JobStatus, initResult *worker.KojiInitJobResult, buildResults []worker.OSBuildKojiJobResult, result *worker.KojiFinalizeJobResult) ComposeStatusValue {
+func composeStatusFromKojiJobStatus(js *worker.JobStatus, initResult *worker.KojiInitJobResult, buildResults []worker.OSBuildJobResult, result *worker.KojiFinalizeJobResult) ComposeStatusValue {
 	if js.Canceled {
 		return ComposeStatusValueFailure
 	}
@@ -884,8 +884,8 @@ func (h *apiHandlers) GetComposeLogs(ctx echo.Context, id string) error {
 
 	var buildResultBlobs []interface{}
 	for i := 1; i < len(deps); i++ {
-		var buildResult worker.OSBuildKojiJobResult
-		_, _, err = h.server.workers.OSBuildKojiJobStatus(deps[i], &buildResult)
+		var buildResult worker.OSBuildJobResult
+		_, _, err = h.server.workers.OSBuildJobStatus(deps[i], &buildResult)
 		if err != nil {
 			return HTTPErrorWithInternal(ErrorComposeNotFound, err)
 		}
@@ -936,8 +936,8 @@ func (h *apiHandlers) GetComposeManifests(ctx echo.Context, id string) error {
 
 	var manifestBlobs []interface{}
 	for _, id := range deps[1:] {
-		var buildJob worker.OSBuildKojiJob
-		err = h.server.workers.OSBuildKojiJob(id, &buildJob)
+		var buildJob worker.OSBuildJob
+		err = h.server.workers.OSBuildJob(id, &buildJob)
 		if err != nil {
 			return HTTPErrorWithInternal(ErrorComposeNotFound, err)
 		}
@@ -945,7 +945,7 @@ func (h *apiHandlers) GetComposeManifests(ctx echo.Context, id string) error {
 		if len(buildJob.Manifest) == 0 {
 			manifest = buildJob.Manifest
 		} else {
-			_, deps, err := h.server.workers.OSBuildKojiJobStatus(id, nil)
+			_, deps, err := h.server.workers.OSBuildJobStatus(id, nil)
 			if err != nil {
 				return HTTPErrorWithInternal(ErrorComposeNotFound, err)
 			}

@@ -702,8 +702,7 @@ func (impl *OSBuildJobImpl) Run(job worker.Job) error {
 					logWithId.Warnf("[Koji] logout failed: %v", err)
 				}
 			}()
-
-			file, err := os.Open(path.Join(outputDirectory, exportPath, options.Filename))
+			file, err := os.Open(path.Join(outputDirectory, exportPath, args.ImageName))
 			if err != nil {
 				osbuildJobResult.JobError = clienterrors.WorkerClientError(clienterrors.ErrorKojiBuild, fmt.Sprintf("failed to open the image for reading: %v", err))
 				return nil
