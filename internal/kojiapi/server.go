@@ -20,6 +20,7 @@ import (
 	"github.com/osbuild/osbuild-composer/internal/distroregistry"
 	"github.com/osbuild/osbuild-composer/internal/kojiapi/api"
 	"github.com/osbuild/osbuild-composer/internal/rpmmd"
+	"github.com/osbuild/osbuild-composer/internal/target"
 	"github.com/osbuild/osbuild-composer/internal/worker"
 )
 
@@ -173,15 +174,19 @@ func (h *apiHandlers) PostCompose(ctx echo.Context) error {
 
 	var buildIDs []uuid.UUID
 	for i, ir := range imageRequests {
-		id, err := h.server.workers.EnqueueOSBuildKoji(ir.arch, &worker.OSBuildKojiJob{
+		id, err := h.server.workers.EnqueueOSBuildAsDependency(ir.arch, &worker.OSBuildJob{
 			Manifest:      ir.manifest,
 			ImageName:     ir.filename,
 			Exports:       ir.exports,
 			PipelineNames: ir.pipelineNames,
-			KojiServer:    request.Koji.Server,
-			KojiDirectory: kojiDirectory,
-			KojiFilename:  kojiFilenames[i],
-		}, initID, "")
+			Targets: []*target.Target{
+				target.NewKojiTarget(&target.KojiTargetOptions{
+					Server:          request.Koji.Server,
+					UploadDirectory: kojiDirectory,
+					Filename:        kojiFilenames[i],
+				}),
+			},
+		}, []uuid.UUID{initID}, "")
 		if err != nil {
 			// This is a programming error.
 			panic(err)
@@ -250,7 +255,7 @@ func splitExtension(filename string) string {
 	return "." + strings.Join(filenameParts[1:], ".")
 }
 
-func composeStatusFromJobStatus(js *worker.JobStatus, initResult *worker.KojiInitJobResult, buildResults []worker.OSBuildKojiJobResult, result *worker.KojiFinalizeJobResult) api.ComposeStatusValue {
+func composeStatusFromJobStatus(js *worker.JobStatus, initResult *worker.KojiInitJobResult, buildResults []worker.OSBuildJobResult, result *worker.KojiFinalizeJobResult) api.ComposeStatusValue {
 	if js.Canceled {
 		return api.ComposeStatusValueFailure
 	}
@@ -279,7 +284,7 @@ func composeStatusFromJobStatus(js *worker.JobStatus, initResult *worker.KojiIni
 	return api.ComposeStatusValueSuccess
 }
 
-func imageStatusFromJobStatus(js *worker.JobStatus, initResult *worker.KojiInitJobResult, buildResult *worker.OSBuildKojiJobResult) api.ImageStatusValue {
+func imageStatusFromJobStatus(js *worker.JobStatus, initResult *worker.KojiInitJobResult, buildResult *worker.OSBuildJobResult) api.ImageStatusValue {
 	if js.Canceled {
 		return api.ImageStatusValueFailure
 	}
@@ -323,11 +328,11 @@ func (h *apiHandlers) GetComposeId(ctx echo.Context, idstr string) error {
 		panic(err)
 	}
 
-	var buildResults []worker.OSBuildKojiJobResult
+	var buildResults []worker.OSBuildJobResult
 	var imageStatuses []api.ImageStatus
 	for i := 1; i < len(deps); i++ {
-		var buildResult worker.OSBuildKojiJobResult
-		jobStatus, _, err := h.server.workers.OSBuildKojiJobStatus(deps[i], &buildResult)
+		var buildResult worker.OSBuildJobResult
+		jobStatus, _, err := h.server.workers.OSBuildJobStatus(deps[i], &buildResult)
 		if err != nil {
 			// this is a programming error
 			panic(err)
@@ -378,8 +383,8 @@ func (h *apiHandlers) GetComposeIdLogs(ctx echo.Context, idstr string) error {
 
 	var buildResults []interface{}
 	for i := 1; i < len(deps); i++ {
-		var buildResult worker.OSBuildKojiJobResult
-		_, _, err = h.server.workers.OSBuildKojiJobStatus(deps[i], &buildResult)
+		var buildResult worker.OSBuildJobResult
+		_, _, err = h.server.workers.OSBuildJobStatus(deps[i], &buildResult)
 		if err != nil {
 			// This is a programming error.
 			panic(err)
@@ -414,8 +419,8 @@ func (h *apiHandlers) GetComposeIdManifests(ctx echo.Context, idstr string) erro
 
 	var manifests []distro.Manifest
 	for _, id := range deps[1:] {
-		var buildJob worker.OSBuildKojiJob
-		err = h.server.workers.OSBuildKojiJob(id, &buildJob)
+		var buildJob worker.OSBuildJob
+		err = h.server.workers.OSBuildJob(id, &buildJob)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("Job %s could not be deserialized: %s", idstr, err))
 		}
