@@ -26,6 +26,8 @@ const (
 	ErrorDNFOtherError     ClientErrorCode = 22
 	ErrorRPMMDError        ClientErrorCode = 23
 	ErrorEmptyPackageSpecs ClientErrorCode = 24
+
+	ErrorJobDependency ClientErrorCode = 25
 )
 
 type ClientErrorCode int
