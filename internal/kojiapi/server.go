@@ -16,6 +16,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/osbuild/osbuild-composer/internal/blueprint"
+	"github.com/osbuild/osbuild-composer/internal/common"
 	"github.com/osbuild/osbuild-composer/internal/distro"
 	"github.com/osbuild/osbuild-composer/internal/distroregistry"
 	"github.com/osbuild/osbuild-composer/internal/kojiapi/api"
@@ -203,6 +204,10 @@ func (h *apiHandlers) PostCompose(ctx echo.Context) error {
 		KojiDirectory: kojiDirectory,
 		TaskID:        uint64(request.Koji.TaskId),
 		StartTime:     uint64(time.Now().Unix()),
+		// The first Dynamic Arg will be the result from KojiInit job,
+		// so osbuild job results start from the index "1"
+		OSBuildDynArgsStartIdx: common.IntToPtr(1),
+		OSBuildDynArgsCount:    common.IntToPtr(len(buildIDs)),
 	}, initID, buildIDs, "")
 	if err != nil {
 		// This is a programming error.

@@ -86,6 +86,9 @@ type KojiFinalizeJob struct {
 	KojiDirectory string   `json:"koji_directory"`
 	TaskID        uint64   `json:"task_id"` /* https://pagure.io/koji/issue/215 */
 	StartTime     uint64   `json:"start_time"`
+	// Start index of the OSBuildJobResult instances and their count in the job's dynamic arguments slice
+	OSBuildDynArgsStartIdx *int `json:"osbuild_dyn_args_start_idx,omitempty"`
+	OSBuildDynArgsCount    *int `json:"osbuild_dyn_args_count,omitempty"`
 }
 
 type KojiFinalizeJobResult struct {

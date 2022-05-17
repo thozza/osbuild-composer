@@ -248,6 +248,10 @@ func (s *Server) enqueueKojiCompose(taskID uint64, server, name, version, releas
 		KojiDirectory: kojiDirectory,
 		TaskID:        taskID,
 		StartTime:     uint64(time.Now().Unix()),
+		// The first Dynamic Arg will be the result from KojiInit job,
+		// so osbuild job results start from the index "1"
+		OSBuildDynArgsStartIdx: common.IntToPtr(1),
+		OSBuildDynArgsCount:    common.IntToPtr(len(buildIDs)),
 	}, initID, buildIDs, channel)
 	if err != nil {
 		return id, HTTPErrorWithInternal(ErrorEnqueueingJob, err)
