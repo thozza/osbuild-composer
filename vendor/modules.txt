@@ -141,11 +141,10 @@ github.com/coreos/go-semver/semver
 github.com/coreos/go-systemd/activation
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/deepmap/oapi-codegen v1.8.2
+# github.com/deepmap/oapi-codegen v1.10.1
 ## explicit
 github.com/deepmap/oapi-codegen/cmd/oapi-codegen
 github.com/deepmap/oapi-codegen/pkg/codegen
-github.com/deepmap/oapi-codegen/pkg/codegen/templates
 github.com/deepmap/oapi-codegen/pkg/runtime
 github.com/deepmap/oapi-codegen/pkg/types
 github.com/deepmap/oapi-codegen/pkg/util
@@ -153,7 +152,7 @@ github.com/deepmap/oapi-codegen/pkg/util
 github.com/dimchansky/utfbom
 # github.com/dougm/pretty v0.0.0-20171025230240-2ee9d7453c02
 github.com/dougm/pretty
-# github.com/getkin/kin-openapi v0.93.0
+# github.com/getkin/kin-openapi v0.94.0
 ## explicit
 github.com/getkin/kin-openapi/jsoninfo
 github.com/getkin/kin-openapi/openapi3
@@ -166,7 +165,6 @@ github.com/ghodss/yaml
 # github.com/go-openapi/jsonpointer v0.19.5
 github.com/go-openapi/jsonpointer
 # github.com/go-openapi/swag v0.21.1
-## explicit
 github.com/go-openapi/swag
 # github.com/gobwas/glob v0.2.3
 ## explicit
@@ -282,11 +280,11 @@ github.com/labstack/gommon/bytes
 github.com/labstack/gommon/color
 github.com/labstack/gommon/log
 github.com/labstack/gommon/random
-# github.com/mailru/easyjson v0.7.6
+# github.com/mailru/easyjson v0.7.7
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
-# github.com/mattn/go-colorable v0.1.11
+# github.com/mattn/go-colorable v0.1.12
 github.com/mattn/go-colorable
 # github.com/mattn/go-ieproxy v0.0.1
 github.com/mattn/go-ieproxy
@@ -319,8 +317,6 @@ github.com/oracle/oci-go-sdk/v54/identity
 github.com/oracle/oci-go-sdk/v54/objectstorage
 github.com/oracle/oci-go-sdk/v54/objectstorage/transfer
 github.com/oracle/oci-go-sdk/v54/workrequests
-# github.com/pkg/errors v0.9.1
-github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/prometheus/client_golang v1.12.1
@@ -429,16 +425,17 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
+# golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/pkcs12
 golang.org/x/crypto/pkcs12/internal/rc2
-# golang.org/x/mod v0.4.2
+# golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
+golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20220412020605-290c469a71a5
+# golang.org/x/net v0.0.0-20220418201149-a630d4f3e7a2
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -484,9 +481,9 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
+# golang.org/x/time v0.0.0-20220411224347-583f2d630306
 golang.org/x/time/rate
-# golang.org/x/tools v0.1.5
+# golang.org/x/tools v0.1.10
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/imports
 golang.org/x/tools/internal/event
