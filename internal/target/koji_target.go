@@ -1,5 +1,7 @@
 package target
 
+const TargetNameKoji TargetName = "org.osbuild.koji"
+
 type KojiTargetOptions struct {
 	BuildID         uint64 `json:"build_id"`
 	TaskID          uint64 `json:"task_id"`
@@ -16,5 +18,5 @@ type KojiTargetOptions struct {
 func (KojiTargetOptions) isTargetOptions() {}
 
 func NewKojiTarget(options *KojiTargetOptions) *Target {
-	return newTarget("org.osbuild.koji", options)
+	return newTarget(TargetNameKoji, options)
 }
