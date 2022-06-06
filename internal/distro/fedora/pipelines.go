@@ -35,7 +35,11 @@ func qcow2Pipelines(t *imageType, customizations *blueprint.Customizations, opti
 	imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 	pipelines = append(pipelines, *imagePipeline)
 
-	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, t.filename, osbuild.QEMUFormatQCOW2, osbuild.QCOW2Options{Compat: "1.1"})
+	filename, err := t.FilenameByExport(imagePipeline.Name)
+	if err != nil {
+		return nil, err
+	}
+	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, filename, osbuild.QEMUFormatQCOW2, osbuild.QCOW2Options{Compat: "1.1"})
 	pipelines = append(pipelines, *qemuPipeline)
 
 	return pipelines, nil
@@ -72,7 +76,11 @@ func vhdPipelines(t *imageType, customizations *blueprint.Customizations, option
 	imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 	pipelines = append(pipelines, *imagePipeline)
 
-	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, t.filename, osbuild.QEMUFormatVPC, nil)
+	filename, err := t.FilenameByExport(imagePipeline.Name)
+	if err != nil {
+		return nil, err
+	}
+	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, filename, osbuild.QEMUFormatVPC, nil)
 	pipelines = append(pipelines, *qemuPipeline)
 	return pipelines, nil
 }
@@ -97,7 +105,11 @@ func vmdkPipelines(t *imageType, customizations *blueprint.Customizations, optio
 	imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 	pipelines = append(pipelines, *imagePipeline)
 
-	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, t.filename, osbuild.QEMUFormatVMDK, osbuild.VMDKOptions{Subformat: osbuild.VMDKSubformatStreamOptimized})
+	filename, err := t.FilenameByExport(imagePipeline.Name)
+	if err != nil {
+		return nil, err
+	}
+	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, filename, osbuild.QEMUFormatVMDK, osbuild.VMDKOptions{Subformat: osbuild.VMDKSubformatStreamOptimized})
 	pipelines = append(pipelines, *qemuPipeline)
 	return pipelines, nil
 }
@@ -122,7 +134,11 @@ func openstackPipelines(t *imageType, customizations *blueprint.Customizations, 
 	imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 	pipelines = append(pipelines, *imagePipeline)
 
-	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, t.filename, osbuild.QEMUFormatQCOW2, nil)
+	filename, err := t.FilenameByExport(imagePipeline.Name)
+	if err != nil {
+		return nil, err
+	}
+	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, filename, osbuild.QEMUFormatQCOW2, nil)
 	pipelines = append(pipelines, *qemuPipeline)
 	return pipelines, nil
 }

@@ -15,6 +15,9 @@ import (
 	"github.com/osbuild/osbuild-composer/internal/rpmmd"
 )
 
+// qcow2Pipelines returns osbuild pipelines for the qcow2 image
+// Export pipeline names:
+// - 'qcow2'
 func qcow2Pipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	pipelines := make([]osbuild.Pipeline, 0)
 	pipelines = append(pipelines, *buildPipeline(repos, packageSetSpecs[buildPkgsKey], t.arch.distro.runner))
@@ -35,7 +38,13 @@ func qcow2Pipelines(t *imageType, customizations *blueprint.Customizations, opti
 	imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 	pipelines = append(pipelines, *imagePipeline)
 
-	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, t.filename, osbuild.QEMUFormatQCOW2, osbuild.QCOW2Options{Compat: "1.1"})
+	// qemuPipeline uses the provided 'format' name as the pipeline name
+	qemuExportName := string(osbuild.QEMUFormatQCOW2)
+	filename, err := t.FilenameByExport(qemuExportName)
+	if err != nil {
+		return nil, err
+	}
+	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, filename, osbuild.QEMUFormatQCOW2, osbuild.QCOW2Options{Compat: "1.1"})
 	pipelines = append(pipelines, *qemuPipeline)
 
 	return pipelines, nil
@@ -52,6 +61,10 @@ func prependKernelCmdlineStage(pipeline *osbuild.Pipeline, kernelOptions string,
 	return pipeline
 }
 
+// vhdPipelines returns osbuild pipelines for the vhd image
+// Export pipeline names:
+// - 'vpc' (if 'compress' is false)
+// - 'archive' (if 'compress' is true)
 func vhdPipelines(compress bool) pipelinesFunc {
 	return func(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 		pipelines := make([]osbuild.Pipeline, 0)
@@ -73,25 +86,40 @@ func vhdPipelines(compress bool) pipelinesFunc {
 		imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 		pipelines = append(pipelines, *imagePipeline)
 
+		// TODO: rework to support multiple exports
 		var qemufile string
 		if compress {
 			qemufile = "disk.vhd"
 		} else {
-			qemufile = t.filename
+			// qemuPipeline uses the provided 'format' name as the pipeline name
+			qemuExportName := string(osbuild.QEMUFormatVPC)
+			qemufile, err = t.FilenameByExport(qemuExportName)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, qemufile, osbuild.QEMUFormatVPC, nil)
 		pipelines = append(pipelines, *qemuPipeline)
 
 		if compress {
+			// xzArchivePipeline uses the 'archive' as the pipeline name
+			exportName := "archive"
+			filename, err := t.FilenameByExport(exportName)
+			if err != nil {
+				return nil, err
+			}
 			lastPipeline := pipelines[len(pipelines)-1]
-			pipelines = append(pipelines, *xzArchivePipeline(lastPipeline.Name, qemufile, t.Filename()))
+			pipelines = append(pipelines, *xzArchivePipeline(lastPipeline.Name, qemufile, filename))
 		}
 
 		return pipelines, nil
 	}
 }
 
+// vmdkPipelines returns osbuild pipelines for the vmdk image
+// Export pipeline names:
+// - 'vmdk'
 func vmdkPipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	pipelines := make([]osbuild.Pipeline, 0)
 	pipelines = append(pipelines, *buildPipeline(repos, packageSetSpecs[buildPkgsKey], t.arch.distro.runner))
@@ -112,11 +140,20 @@ func vmdkPipelines(t *imageType, customizations *blueprint.Customizations, optio
 	imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 	pipelines = append(pipelines, *imagePipeline)
 
-	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, t.filename, osbuild.QEMUFormatVMDK, osbuild.VMDKOptions{Subformat: osbuild.VMDKSubformatStreamOptimized})
+	// qemuPipeline uses the provided 'format' name as the pipeline name
+	qemuExportName := string(osbuild.QEMUFormatVMDK)
+	filename, err := t.FilenameByExport(qemuExportName)
+	if err != nil {
+		return nil, err
+	}
+	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, filename, osbuild.QEMUFormatVMDK, osbuild.VMDKOptions{Subformat: osbuild.VMDKSubformatStreamOptimized})
 	pipelines = append(pipelines, *qemuPipeline)
 	return pipelines, nil
 }
 
+// openstackPipelines returns osbuild pipelines for the openstack image
+// Export pipeline names:
+// - 'qcow2'
 func openstackPipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	pipelines := make([]osbuild.Pipeline, 0)
 	pipelines = append(pipelines, *buildPipeline(repos, packageSetSpecs[buildPkgsKey], t.arch.distro.runner))
@@ -137,11 +174,20 @@ func openstackPipelines(t *imageType, customizations *blueprint.Customizations, 
 	imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 	pipelines = append(pipelines, *imagePipeline)
 
-	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, t.filename, osbuild.QEMUFormatQCOW2, nil)
+	// qemuPipeline uses the provided 'format' name as the pipeline name
+	qemuExportName := string(osbuild.QEMUFormatQCOW2)
+	filename, err := t.FilenameByExport(qemuExportName)
+	if err != nil {
+		return nil, err
+	}
+	qemuPipeline := qemuPipeline(imagePipeline.Name, diskfile, filename, osbuild.QEMUFormatQCOW2, nil)
 	pipelines = append(pipelines, *qemuPipeline)
 	return pipelines, nil
 }
 
+// ec2CommonPipelines returns osbuild pipelines for the ec2/ami image
+// Export pipeline names:
+// - 'image'
 func ec2CommonPipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions,
 	repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec,
 	rng *rand.Rand, diskfile string) ([]osbuild.Pipeline, error) {
@@ -166,11 +212,21 @@ func ec2CommonPipelines(t *imageType, customizations *blueprint.Customizations, 
 }
 
 // ec2Pipelines returns pipelines which produce uncompressed EC2 images which are expected to use RHSM for content
+// Export pipeline names:
+// - 'image'
 func ec2Pipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
-	return ec2CommonPipelines(t, customizations, options, repos, packageSetSpecs, rng, t.Filename())
+	// ec2CommonPipelines has only one export pipeline named "image"
+	exportName := "image"
+	filename, err := t.FilenameByExport(exportName)
+	if err != nil {
+		return nil, err
+	}
+	return ec2CommonPipelines(t, customizations, options, repos, packageSetSpecs, rng, filename)
 }
 
 // rhelEc2Pipelines returns pipelines which produce XZ-compressed EC2 images which are expected to use RHUI for content
+// Export pipeline names:
+// - 'archive'
 func rhelEc2Pipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	rawImageFilename := "image.raw"
 
@@ -179,12 +235,20 @@ func rhelEc2Pipelines(t *imageType, customizations *blueprint.Customizations, op
 		return nil, err
 	}
 
+	exportName := "archive"
+	filename, err := t.FilenameByExport(exportName)
+	if err != nil {
+		return nil, err
+	}
 	lastPipeline := pipelines[len(pipelines)-1]
-	pipelines = append(pipelines, *xzArchivePipeline(lastPipeline.Name, rawImageFilename, t.Filename()))
+	pipelines = append(pipelines, *xzArchivePipeline(lastPipeline.Name, rawImageFilename, filename))
 
 	return pipelines, nil
 }
 
+// gcePipelines returns pipelines for the GCE image type
+// Export pipeline names:
+// - 'archive'
 func gcePipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	pipelines := make([]osbuild.Pipeline, 0)
 	pipelines = append(pipelines, *buildPipeline(repos, packageSetSpecs[buildPkgsKey], t.arch.distro.runner))
@@ -205,8 +269,13 @@ func gcePipelines(t *imageType, customizations *blueprint.Customizations, option
 	imagePipeline := liveImagePipeline(treePipeline.Name, diskfile, partitionTable, t.arch, kernelVer)
 	pipelines = append(pipelines, *imagePipeline)
 
-	archivePipeline := tarArchivePipeline("archive", imagePipeline.Name, &osbuild.TarStageOptions{
-		Filename: t.Filename(),
+	exportName := "archive"
+	filename, err := t.FilenameByExport(exportName)
+	if err != nil {
+		return nil, err
+	}
+	archivePipeline := tarArchivePipeline(exportName, imagePipeline.Name, &osbuild.TarStageOptions{
+		Filename: filename,
 		Format:   osbuild.TarArchiveFormatOldgnu,
 		RootNode: osbuild.TarRootNodeOmit,
 		// import of the image to GCP fails in case the options below are enabled, which is the default
@@ -219,6 +288,9 @@ func gcePipelines(t *imageType, customizations *blueprint.Customizations, option
 	return pipelines, nil
 }
 
+// gcePipelines returns pipelines for the GCE image type
+// Export pipeline names:
+// - 'root-tar'
 func tarPipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	pipelines := make([]osbuild.Pipeline, 0)
 	pipelines = append(pipelines, *buildPipeline(repos, packageSetSpecs[buildPkgsKey], t.arch.distro.runner))
@@ -227,8 +299,14 @@ func tarPipelines(t *imageType, customizations *blueprint.Customizations, option
 	if err != nil {
 		return nil, err
 	}
+
+	exportName := "root-tar"
+	filename, err := t.FilenameByExport(exportName)
+	if err != nil {
+		return nil, err
+	}
 	pipelines = append(pipelines, *treePipeline)
-	tarPipeline := tarArchivePipeline("root-tar", treePipeline.Name, &osbuild.TarStageOptions{Filename: "root.tar.xz"})
+	tarPipeline := tarArchivePipeline(exportName, treePipeline.Name, &osbuild.TarStageOptions{Filename: filename})
 	pipelines = append(pipelines, *tarPipeline)
 	return pipelines, nil
 }
@@ -240,6 +318,9 @@ func makeISORootPath(p string) string {
 	return fmt.Sprintf("file://%s", fullpath)
 }
 
+// edgeInstallerPipelines returns pipelines for the edge installer image type
+// Export pipeline names:
+// - 'bootiso'
 func edgeInstallerPipelines(t *imageType, customizations *blueprint.Customizations, options distro.ImageOptions, repos []rpmmd.RepoConfig, packageSetSpecs map[string][]rpmmd.PackageSpec, rng *rand.Rand) ([]osbuild.Pipeline, error) {
 	pipelines := make([]osbuild.Pipeline, 0)
 	pipelines = append(pipelines, *buildPipeline(repos, packageSetSpecs[buildPkgsKey], t.arch.distro.runner))
@@ -257,7 +338,14 @@ func edgeInstallerPipelines(t *imageType, customizations *blueprint.Customizatio
 	pipelines = append(pipelines, *anacondaTreePipeline(repos, installerPackages, kernelVer, archName, d.product, d.osVersion, "edge", ksUsers))
 	isolabel := fmt.Sprintf(d.isolabelTmpl, archName)
 	pipelines = append(pipelines, *bootISOTreePipeline(kernelVer, archName, d.vendor, d.product, d.osVersion, isolabel, kickstartOptions, payloadStages))
-	pipelines = append(pipelines, *bootISOPipeline(t.Filename(), d.isolabelTmpl, archName, false))
+
+	// bootISOPipeline uses 'bootiso' as the pipeline name
+	exportName := "bootiso"
+	filename, err := t.FilenameByExport(exportName)
+	if err != nil {
+		return nil, err
+	}
+	pipelines = append(pipelines, *bootISOPipeline(filename, d.isolabelTmpl, archName, false))
 	return pipelines, nil
 }
 
@@ -335,7 +423,15 @@ func edgeContainerPipelines(t *imageType, customizations *blueprint.Customizatio
 	nginxConfigPath := "/etc/nginx.conf"
 	httpPort := "8080"
 	pipelines = append(pipelines, *containerTreePipeline(repos, packageSetSpecs[containerPkgsKey], options, customizations, nginxConfigPath, httpPort))
-	pipelines = append(pipelines, *containerPipeline(t, nginxConfigPath, httpPort))
+
+	// containerPipeline uses 'container' as the pipeline name
+	exportName := "container"
+	filename, err := t.FilenameByExport(exportName)
+	if err != nil {
+		return nil, err
+	}
+	lastPipeline := pipelines[len(pipelines)-1]
+	pipelines = append(pipelines, *containerPipeline(lastPipeline.Name, t.Arch().Name(), filename, nginxConfigPath, httpPort))
 	return pipelines, nil
 }
 
@@ -368,10 +464,14 @@ func edgeRawImagePipelines(t *imageType, customizations *blueprint.Customization
 	pipelines := make([]osbuild.Pipeline, 0)
 	pipelines = append(pipelines, *buildPipeline(repos, packageSetSpecs[buildPkgsKey], t.arch.distro.runner))
 
-	imgName := t.filename
-
 	// create the raw image
-	imagePipelines, _, err := edgeImagePipelines(t, imgName, options, rng)
+	// edgeImagePipelines uses 'archive' as the last (export) pipeline name
+	exportName := "archive"
+	filename, err := t.FilenameByExport(exportName)
+	if err != nil {
+		return nil, err
+	}
+	imagePipelines, _, err := edgeImagePipelines(t, filename, options, rng)
 	if err != nil {
 		return nil, err
 	}
@@ -707,13 +807,15 @@ func containerTreePipeline(repos []rpmmd.RepoConfig, packages []rpmmd.PackageSpe
 	return p
 }
 
-func containerPipeline(t *imageType, nginxConfigPath, listenPort string) *osbuild.Pipeline {
+// containerPipeline returns a pipeline to create an Nginx container.
+// Name of the returned pipeline is 'container'.
+func containerPipeline(inputPipelineName, arch, filename string, nginxConfigPath, listenPort string) *osbuild.Pipeline {
 	p := new(osbuild.Pipeline)
 	p.Name = "container"
 	p.Build = "name:build"
 	options := &osbuild.OCIArchiveStageOptions{
-		Architecture: t.arch.Name(),
-		Filename:     t.Filename(),
+		Architecture: arch,
+		Filename:     filename,
 		Config: &osbuild.OCIArchiveConfig{
 			Cmd:          []string{"nginx", "-c", nginxConfigPath},
 			ExposedPorts: []string{listenPort},
@@ -722,7 +824,7 @@ func containerPipeline(t *imageType, nginxConfigPath, listenPort string) *osbuil
 	baseInput := new(osbuild.OCIArchiveStageInput)
 	baseInput.Type = "org.osbuild.tree"
 	baseInput.Origin = "org.osbuild.pipeline"
-	baseInput.References = []string{"name:container-tree"}
+	baseInput.References = []string{fmt.Sprintf("name:%s", inputPipelineName)}
 	inputs := &osbuild.OCIArchiveStageInputs{Base: baseInput}
 	p.AddStage(osbuild.NewOCIArchiveStage(options, inputs))
 	return p
@@ -766,7 +868,14 @@ func edgeSimplifiedInstallerPipelines(t *imageType, customizations *blueprint.Cu
 	bootISOTreePipeline := simplifiedInstallerBootISOTreePipeline(imgPipelineName, kernelVer, rng)
 
 	pipelines = append(pipelines, *installerTreePipeline, *efibootTreePipeline, *bootISOTreePipeline)
-	pipelines = append(pipelines, *bootISOPipeline(t.Filename(), d.isolabelTmpl, t.Arch().Name(), false))
+
+	// bootISOPipeline uses 'bootiso' as the last (export) pipeline name
+	exportName := "bootiso"
+	filename, err := t.FilenameByExport(exportName)
+	if err != nil {
+		return nil, err
+	}
+	pipelines = append(pipelines, *bootISOPipeline(filename, d.isolabelTmpl, t.Arch().Name(), false))
 
 	return pipelines, nil
 }
@@ -978,6 +1087,8 @@ func ostreeDeployPipeline(
 	return p
 }
 
+// anacondaTreePipeline returns an Anaconda tree pipeline.
+// Name of the returned pipeline is 'anaconda-tree'.
 func anacondaTreePipeline(repos []rpmmd.RepoConfig, packages []rpmmd.PackageSpec, kernelVer, arch, product, osVersion, variant string, users bool) *osbuild.Pipeline {
 	p := new(osbuild.Pipeline)
 	p.Name = "anaconda-tree"
@@ -1029,6 +1140,8 @@ func anacondaTreePipeline(repos []rpmmd.RepoConfig, packages []rpmmd.PackageSpec
 	return p
 }
 
+// bootISOTreePipeline returns a boot ISO tree pipeline.
+// Name of the returned pipeline is 'bootiso-tree'.
 func bootISOTreePipeline(kernelVer, arch, vendor, product, osVersion, isolabel string, ksOptions *osbuild.KickstartStageOptions, payloadStages []*osbuild.Stage) *osbuild.Pipeline {
 	p := new(osbuild.Pipeline)
 	p.Name = "bootiso-tree"
@@ -1044,6 +1157,9 @@ func bootISOTreePipeline(kernelVer, arch, vendor, product, osVersion, isolabel s
 
 	return p
 }
+
+// bootISOPipeline returns a boot ISO pipeline.
+// Name of the returned pipeline is 'bootiso'.
 func bootISOPipeline(filename, isolabel, arch string, isolinux bool) *osbuild.Pipeline {
 	p := new(osbuild.Pipeline)
 	p.Name = "bootiso"
@@ -1055,6 +1171,8 @@ func bootISOPipeline(filename, isolabel, arch string, isolinux bool) *osbuild.Pi
 	return p
 }
 
+// liveImagePipeline returns a pipeline to create a bootable raw image with partitions.
+// Name of the returned pipeline is 'image'.
 func liveImagePipeline(inputPipelineName string, outputFilename string, pt *disk.PartitionTable, arch *architecture, kernelVer string) *osbuild.Pipeline {
 	p := new(osbuild.Pipeline)
 	p.Name = "image"
@@ -1078,6 +1196,8 @@ func liveImagePipeline(inputPipelineName string, outputFilename string, pt *disk
 	return p
 }
 
+// xzArchivePipeline returns a pipeline to create an XZ-archive.
+// Name of the returned pipeline is 'archive'.
 func xzArchivePipeline(inputPipelineName, inputFilename, outputFilename string) *osbuild.Pipeline {
 	p := new(osbuild.Pipeline)
 	p.Name = "archive"
@@ -1091,6 +1211,8 @@ func xzArchivePipeline(inputPipelineName, inputFilename, outputFilename string) 
 	return p
 }
 
+// tarArchivePipeline returns a pipeline to create a TAR container.
+// Name of the returned pipeline is the same as provided in the 'name' argument.
 func tarArchivePipeline(name, inputPipelineName string, tarOptions *osbuild.TarStageOptions) *osbuild.Pipeline {
 	p := new(osbuild.Pipeline)
 	p.Name = name
@@ -1099,6 +1221,8 @@ func tarArchivePipeline(name, inputPipelineName string, tarOptions *osbuild.TarS
 	return p
 }
 
+// qemuPipeline returns a pipeline to convert a raw image into a specific format using qemu-img.
+// Name of the returned pipeline is the same as the string representation of value provided in the 'format' argument.
 func qemuPipeline(inputPipelineName, inputFilename, outputFilename string, format osbuild.QEMUFormat, formatOptions osbuild.QEMUFormatOptions) *osbuild.Pipeline {
 	p := new(osbuild.Pipeline)
 	p.Name = string(format)

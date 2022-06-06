@@ -15,6 +15,7 @@ import (
 	"github.com/osbuild/osbuild-composer/internal/distro"
 	osbuild "github.com/osbuild/osbuild-composer/internal/osbuild2"
 	"github.com/osbuild/osbuild-composer/internal/rpmmd"
+	"github.com/osbuild/osbuild-composer/internal/target"
 )
 
 const (
@@ -235,8 +236,8 @@ type imageType struct {
 	arch               *architecture
 	name               string
 	nameAliases        []string
-	filename           string
-	mimeType           string
+	filenameByExport   map[string]string
+	mimeTypeByExport   map[string]string
 	packageSets        map[string]packageSetFunc
 	packageSetChains   map[string][]string
 	defaultImageConfig *distro.ImageConfig
@@ -245,6 +246,7 @@ type imageType struct {
 	buildPipelines     []string
 	payloadPipelines   []string
 	exports            []string
+	exportByTarget     map[target.TargetName]string
 	pipelines          pipelinesFunc
 
 	// bootISO: installable ISO
@@ -268,11 +270,45 @@ func (t *imageType) Arch() distro.Arch {
 }
 
 func (t *imageType) Filename() string {
-	return t.filename
+	// As the backward compatibility, return the filename for the first export
+	filename, err := t.FilenameByExport(t.exports[0])
+	if err != nil {
+		panic(err)
+	}
+	return filename
+}
+
+func (t *imageType) FilenameByExport(export string) (string, error) {
+	filename, ok := t.filenameByExport[export]
+	if !ok {
+		return "", fmt.Errorf("filename for the %q export is not defined", export)
+	}
+	return filename, nil
 }
 
 func (t *imageType) MIMEType() string {
-	return t.mimeType
+	// As the backward compatibility, return the mimetype for the first export
+	mimeType, err := t.MIMETypeByExport(t.exports[0])
+	if err != nil {
+		panic(err)
+	}
+	return mimeType
+}
+
+func (t *imageType) MIMETypeByExport(export string) (string, error) {
+	mimeType, ok := t.mimeTypeByExport[export]
+	if !ok {
+		return "", fmt.Errorf("MIMEType for the %q export is not defined", export)
+	}
+	return mimeType, nil
+}
+
+func (t *imageType) ExportByTarget(target target.TargetName) (string, error) {
+	export, ok := t.exportByTarget[target]
+	if !ok {
+		return "", fmt.Errorf("target %q is not supported by the %q image type", target, t.Name())
+	}
+	return export, nil
 }
 
 func (t *imageType) OSTreeRef() string {
@@ -695,8 +731,6 @@ func newDistro(distroName string) distro.Distro {
 	edgeCommitImgType := imageType{
 		name:        "edge-commit",
 		nameAliases: []string{"rhel-edge-commit"},
-		filename:    "commit.tar",
-		mimeType:    "application/x-tar",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: edgeBuildPackageSet,
 			osPkgsKey:    edgeCommitPackageSet,
@@ -712,13 +746,20 @@ func newDistro(distroName string) distro.Distro {
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"ostree-tree", "ostree-commit", "commit-archive"},
 		exports:          []string{"commit-archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "commit-archive",
+		},
+		filenameByExport: map[string]string{
+			"commit-archive": "commit.tar",
+		},
+		mimeTypeByExport: map[string]string{
+			"commit-archive": "application/x-tar",
+		},
 	}
 
 	edgeOCIImgType := imageType{
 		name:        "edge-container",
 		nameAliases: []string{"rhel-edge-container"},
-		filename:    "container.tar",
-		mimeType:    "application/x-tar",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: edgeBuildPackageSet,
 			osPkgsKey:    edgeCommitPackageSet,
@@ -739,36 +780,50 @@ func newDistro(distroName string) distro.Distro {
 		pipelines:        edgeContainerPipelines,
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"ostree-tree", "ostree-commit", "container-tree", "container"},
-		exports:          []string{containerPkgsKey},
+		exports:          []string{"container"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "container",
+		},
+		filenameByExport: map[string]string{
+			"container": "container.tar",
+		},
+		mimeTypeByExport: map[string]string{
+			"container": "application/x-tar",
+		},
 	}
 
 	edgeRawImgType := imageType{
 		name:        "edge-raw-image",
 		nameAliases: []string{"rhel-edge-raw-image"},
-		filename:    "image.raw.xz",
-		mimeType:    "application/xz",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: edgeRawImageBuildPackageSet,
 		},
 		defaultImageConfig: &distro.ImageConfig{
 			Locale: "en_US.UTF-8",
 		},
-		defaultSize:         10 * GigaByte,
-		rpmOstree:           true,
-		bootable:            true,
-		bootISO:             false,
-		pipelines:           edgeRawImagePipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"image-tree", "image", "archive"},
-		exports:             []string{"archive"},
+		defaultSize:      10 * GigaByte,
+		rpmOstree:        true,
+		bootable:         true,
+		bootISO:          false,
+		pipelines:        edgeRawImagePipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"image-tree", "image", "archive"},
+		exports:          []string{"archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "archive",
+		},
+		filenameByExport: map[string]string{
+			"archive": "image.raw.xz",
+		},
+		mimeTypeByExport: map[string]string{
+			"archive": "application/xz",
+		},
 		basePartitionTables: edgeBasePartitionTables,
 	}
 
 	edgeInstallerImgType := imageType{
 		name:        "edge-installer",
 		nameAliases: []string{"rhel-edge-installer"},
-		filename:    "installer.iso",
-		mimeType:    "application/x-iso9660-image",
 		packageSets: map[string]packageSetFunc{
 			// TODO: non-arch-specific package set handling for installers
 			// This image type requires build packages for installers and
@@ -794,13 +849,20 @@ func newDistro(distroName string) distro.Distro {
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"anaconda-tree", "bootiso-tree", "bootiso"},
 		exports:          []string{"bootiso"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "bootiso",
+		},
+		filenameByExport: map[string]string{
+			"bootiso": "installer.iso",
+		},
+		mimeTypeByExport: map[string]string{
+			"bootiso": "application/x-iso9660-image",
+		},
 	}
 
 	edgeSimplifiedInstallerImgType := imageType{
 		name:        "edge-simplified-installer",
 		nameAliases: []string{"rhel-edge-simplified-installer"},
-		filename:    "simplified-installer.iso",
-		mimeType:    "application/x-iso9660-image",
 		packageSets: map[string]packageSetFunc{
 			// TODO: non-arch-specific package set handling for installers
 			// This image type requires build packages for installers and
@@ -815,21 +877,28 @@ func newDistro(distroName string) distro.Distro {
 		defaultImageConfig: &distro.ImageConfig{
 			EnabledServices: edgeServices,
 		},
-		defaultSize:         10 * GigaByte,
-		rpmOstree:           true,
-		bootable:            true,
-		bootISO:             true,
-		pipelines:           edgeSimplifiedInstallerPipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"image-tree", "image", "archive", "coi-tree", "efiboot-tree", "bootiso-tree", "bootiso"},
-		exports:             []string{"bootiso"},
+		defaultSize:      10 * GigaByte,
+		rpmOstree:        true,
+		bootable:         true,
+		bootISO:          true,
+		pipelines:        edgeSimplifiedInstallerPipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"image-tree", "image", "archive", "coi-tree", "efiboot-tree", "bootiso-tree", "bootiso"},
+		exports:          []string{"bootiso"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "bootiso",
+		},
+		filenameByExport: map[string]string{
+			"bootiso": "simplified-installer.iso",
+		},
+		mimeTypeByExport: map[string]string{
+			"bootiso": "application/x-iso9660-image",
+		},
 		basePartitionTables: edgeBasePartitionTables,
 	}
 
 	qcow2ImgType := imageType{
 		name:          "qcow2",
-		filename:      "disk.qcow2",
-		mimeType:      "application/x-qemu-disk",
 		kernelOptions: "console=tty0 console=ttyS0,115200n8 no_timer_check net.ifnames=0",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
@@ -853,19 +922,26 @@ func newDistro(distroName string) distro.Distro {
 				},
 			},
 		},
-		bootable:            true,
-		defaultSize:         10 * GigaByte,
-		pipelines:           qcow2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "qcow2"},
-		exports:             []string{"qcow2"},
+		bootable:         true,
+		defaultSize:      10 * GigaByte,
+		pipelines:        qcow2Pipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "qcow2"},
+		exports:          []string{"qcow2"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "qcow2",
+		},
+		filenameByExport: map[string]string{
+			"qcow2": "disk.qcow2",
+		},
+		mimeTypeByExport: map[string]string{
+			"qcow2": "application/x-qemu-disk",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	vhdImgType := imageType{
-		name:     "vhd",
-		filename: "disk.vhd",
-		mimeType: "application/x-vhd",
+		name: "vhd",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey:    vhdCommonPackageSet,
@@ -881,20 +957,28 @@ func newDistro(distroName string) distro.Distro {
 			},
 			DefaultTarget: "multi-user.target",
 		},
-		kernelOptions:       "ro biosdevname=0 rootdelay=300 console=ttyS0 earlyprintk=ttyS0 net.ifnames=0",
-		bootable:            true,
-		defaultSize:         4 * GigaByte,
-		pipelines:           vhdPipelines(false),
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "vpc"},
-		exports:             []string{"vpc"},
+		kernelOptions:    "ro biosdevname=0 rootdelay=300 console=ttyS0 earlyprintk=ttyS0 net.ifnames=0",
+		bootable:         true,
+		defaultSize:      4 * GigaByte,
+		pipelines:        vhdPipelines(false),
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "vpc"},
+		exports:          []string{"vpc"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3:      "vpc",
+			target.TargetNameAzureImage: "vpc",
+		},
+		filenameByExport: map[string]string{
+			"vpc": "disk.vhd",
+		},
+		mimeTypeByExport: map[string]string{
+			"vpc": "application/x-vhd",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	azureRhuiImgType := imageType{
-		name:     "azure-rhui",
-		filename: "disk.vhd.xz",
-		mimeType: "application/xz",
+		name: "azure-rhui",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: ec2BuildPackageSet,
 			osPkgsKey:    azureRhuiCommonPackageSet,
@@ -1060,20 +1144,28 @@ func newDistro(distroName string) distro.Distro {
 			},
 			DefaultTarget: "multi-user.target",
 		},
-		kernelOptions:       "ro console=tty1 console=ttyS0 earlyprintk=ttyS0 rootdelay=300",
-		bootable:            true,
-		defaultSize:         68719476736,
-		pipelines:           vhdPipelines(true),
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "vpc", "archive"},
-		exports:             []string{"archive"},
+		kernelOptions:    "ro console=tty1 console=ttyS0 earlyprintk=ttyS0 rootdelay=300",
+		bootable:         true,
+		defaultSize:      68719476736,
+		pipelines:        vhdPipelines(true),
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "vpc", "archive"},
+		exports:          []string{"archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3:      "archive",
+			target.TargetNameAzureImage: "vpc",
+		},
+		filenameByExport: map[string]string{
+			"archive": "disk.vhd.xz",
+		},
+		mimeTypeByExport: map[string]string{
+			"archive": "application/xz",
+		},
 		basePartitionTables: azureRhuiBasePartitionTables,
 	}
 
 	vmdkImgType := imageType{
-		name:     "vmdk",
-		filename: "disk.vmdk",
-		mimeType: "application/x-vmdk",
+		name: "vmdk",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey:    vmdkCommonPackageSet,
@@ -1084,20 +1176,28 @@ func newDistro(distroName string) distro.Distro {
 		defaultImageConfig: &distro.ImageConfig{
 			Locale: "en_US.UTF-8",
 		},
-		kernelOptions:       "ro net.ifnames=0",
-		bootable:            true,
-		defaultSize:         4 * GigaByte,
-		pipelines:           vmdkPipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "vmdk"},
-		exports:             []string{"vmdk"},
+		kernelOptions:    "ro net.ifnames=0",
+		bootable:         true,
+		defaultSize:      4 * GigaByte,
+		pipelines:        vmdkPipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "vmdk"},
+		exports:          []string{"vmdk"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3:  "vmdk",
+			target.TargetNameVMWare: "vmdk",
+		},
+		filenameByExport: map[string]string{
+			"vmdk": "disk.vmdk",
+		},
+		mimeTypeByExport: map[string]string{
+			"vmdk": "application/x-vmdk",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	openstackImgType := imageType{
-		name:     "openstack",
-		filename: "disk.qcow2",
-		mimeType: "application/x-qemu-disk",
+		name: "openstack",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey:    openstackCommonPackageSet,
@@ -1108,13 +1208,22 @@ func newDistro(distroName string) distro.Distro {
 		defaultImageConfig: &distro.ImageConfig{
 			Locale: "en_US.UTF-8",
 		},
-		kernelOptions:       "ro net.ifnames=0",
-		bootable:            true,
-		defaultSize:         4 * GigaByte,
-		pipelines:           openstackPipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "qcow2"},
-		exports:             []string{"qcow2"},
+		kernelOptions:    "ro net.ifnames=0",
+		bootable:         true,
+		defaultSize:      4 * GigaByte,
+		pipelines:        openstackPipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "qcow2"},
+		exports:          []string{"qcow2"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "qcow2",
+		},
+		filenameByExport: map[string]string{
+			"qcow2": "disk.qcow2",
+		},
+		mimeTypeByExport: map[string]string{
+			"qcow2": "application/x-qemu-disk",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
@@ -1312,9 +1421,7 @@ func newDistro(distroName string) distro.Distro {
 	defaultAMIImageConfig = defaultAMIImageConfig.InheritFrom(defaultEc2ImageConfig)
 
 	amiImgTypeX86_64 := imageType{
-		name:     "ami",
-		filename: "image.raw",
-		mimeType: "application/octet-stream",
+		name: "ami",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: ec2BuildPackageSet,
 			osPkgsKey:    ec2CommonPackageSet,
@@ -1322,22 +1429,29 @@ func newDistro(distroName string) distro.Distro {
 		packageSetChains: map[string][]string{
 			osPkgsKey: {osPkgsKey, blueprintPkgsKey},
 		},
-		defaultImageConfig:  defaultAMIImageConfigX86_64,
-		kernelOptions:       "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295",
-		bootable:            true,
-		bootType:            distro.LegacyBootType,
-		defaultSize:         10 * GigaByte,
-		pipelines:           ec2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image"},
-		exports:             []string{"image"},
+		defaultImageConfig: defaultAMIImageConfigX86_64,
+		kernelOptions:      "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295",
+		bootable:           true,
+		bootType:           distro.LegacyBootType,
+		defaultSize:        10 * GigaByte,
+		pipelines:          ec2Pipelines,
+		buildPipelines:     []string{"build"},
+		payloadPipelines:   []string{"os", "image"},
+		exports:            []string{"image"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWS: "image",
+		},
+		filenameByExport: map[string]string{
+			"image": "image.raw",
+		},
+		mimeTypeByExport: map[string]string{
+			"image": "application/octet-stream",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	amiImgTypeAarch64 := imageType{
-		name:     "ami",
-		filename: "image.raw",
-		mimeType: "application/octet-stream",
+		name: "ami",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: ec2BuildPackageSet,
 			osPkgsKey:    ec2CommonPackageSet,
@@ -1345,21 +1459,28 @@ func newDistro(distroName string) distro.Distro {
 		packageSetChains: map[string][]string{
 			osPkgsKey: {osPkgsKey, blueprintPkgsKey},
 		},
-		defaultImageConfig:  defaultAMIImageConfig,
-		kernelOptions:       "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 iommu.strict=0",
-		bootable:            true,
-		defaultSize:         10 * GigaByte,
-		pipelines:           ec2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image"},
-		exports:             []string{"image"},
+		defaultImageConfig: defaultAMIImageConfig,
+		kernelOptions:      "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 iommu.strict=0",
+		bootable:           true,
+		defaultSize:        10 * GigaByte,
+		pipelines:          ec2Pipelines,
+		buildPipelines:     []string{"build"},
+		payloadPipelines:   []string{"os", "image"},
+		exports:            []string{"image"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWS: "image",
+		},
+		filenameByExport: map[string]string{
+			"image": "image.raw",
+		},
+		mimeTypeByExport: map[string]string{
+			"image": "application/octet-stream",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	ec2ImgTypeX86_64 := imageType{
-		name:     "ec2",
-		filename: "image.raw.xz",
-		mimeType: "application/xz",
+		name: "ec2",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: ec2BuildPackageSet,
 			osPkgsKey:    rhelEc2PackageSet,
@@ -1367,22 +1488,29 @@ func newDistro(distroName string) distro.Distro {
 		packageSetChains: map[string][]string{
 			osPkgsKey: {osPkgsKey, blueprintPkgsKey},
 		},
-		defaultImageConfig:  defaultEc2ImageConfigX86_64,
-		kernelOptions:       "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295",
-		bootable:            true,
-		bootType:            distro.LegacyBootType,
-		defaultSize:         10 * GigaByte,
-		pipelines:           rhelEc2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "archive"},
-		exports:             []string{"archive"},
+		defaultImageConfig: defaultEc2ImageConfigX86_64,
+		kernelOptions:      "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295",
+		bootable:           true,
+		bootType:           distro.LegacyBootType,
+		defaultSize:        10 * GigaByte,
+		pipelines:          rhelEc2Pipelines,
+		buildPipelines:     []string{"build"},
+		payloadPipelines:   []string{"os", "image", "archive"},
+		exports:            []string{"archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWS: "archive",
+		},
+		filenameByExport: map[string]string{
+			"archive": "image.raw.xz",
+		},
+		mimeTypeByExport: map[string]string{
+			"archive": "application/xz",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	ec2ImgTypeAarch64 := imageType{
-		name:     "ec2",
-		filename: "image.raw.xz",
-		mimeType: "application/xz",
+		name: "ec2",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: ec2BuildPackageSet,
 			osPkgsKey:    rhelEc2PackageSet,
@@ -1390,21 +1518,28 @@ func newDistro(distroName string) distro.Distro {
 		packageSetChains: map[string][]string{
 			osPkgsKey: {osPkgsKey, blueprintPkgsKey},
 		},
-		defaultImageConfig:  defaultEc2ImageConfig,
-		kernelOptions:       "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 iommu.strict=0",
-		bootable:            true,
-		defaultSize:         10 * GigaByte,
-		pipelines:           rhelEc2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "archive"},
-		exports:             []string{"archive"},
+		defaultImageConfig: defaultEc2ImageConfig,
+		kernelOptions:      "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 iommu.strict=0",
+		bootable:           true,
+		defaultSize:        10 * GigaByte,
+		pipelines:          rhelEc2Pipelines,
+		buildPipelines:     []string{"build"},
+		payloadPipelines:   []string{"os", "image", "archive"},
+		exports:            []string{"archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWS: "archive",
+		},
+		filenameByExport: map[string]string{
+			"archive": "image.raw.xz",
+		},
+		mimeTypeByExport: map[string]string{
+			"archive": "application/xz",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	ec2HaImgTypeX86_64 := imageType{
-		name:     "ec2-ha",
-		filename: "image.raw.xz",
-		mimeType: "application/xz",
+		name: "ec2-ha",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: ec2BuildPackageSet,
 			osPkgsKey:    rhelEc2HaPackageSet,
@@ -1412,15 +1547,24 @@ func newDistro(distroName string) distro.Distro {
 		packageSetChains: map[string][]string{
 			osPkgsKey: {osPkgsKey, blueprintPkgsKey},
 		},
-		defaultImageConfig:  defaultEc2ImageConfigX86_64,
-		kernelOptions:       "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295",
-		bootable:            true,
-		bootType:            distro.LegacyBootType,
-		defaultSize:         10 * GigaByte,
-		pipelines:           rhelEc2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "archive"},
-		exports:             []string{"archive"},
+		defaultImageConfig: defaultEc2ImageConfigX86_64,
+		kernelOptions:      "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295",
+		bootable:           true,
+		bootType:           distro.LegacyBootType,
+		defaultSize:        10 * GigaByte,
+		pipelines:          rhelEc2Pipelines,
+		buildPipelines:     []string{"build"},
+		payloadPipelines:   []string{"os", "image", "archive"},
+		exports:            []string{"archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWS: "archive",
+		},
+		filenameByExport: map[string]string{
+			"archive": "image.raw.xz",
+		},
+		mimeTypeByExport: map[string]string{
+			"archive": "application/xz",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
@@ -1536,9 +1680,7 @@ func newDistro(distroName string) distro.Distro {
 	defaultEc2SapImageConfigX86_64 = defaultEc2SapImageConfigX86_64.InheritFrom(defaultEc2ImageConfigX86_64)
 
 	ec2SapImgTypeX86_64 := imageType{
-		name:     "ec2-sap",
-		filename: "image.raw.xz",
-		mimeType: "application/xz",
+		name: "ec2-sap",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: ec2BuildPackageSet,
 			osPkgsKey:    rhelEc2SapPackageSet,
@@ -1546,15 +1688,24 @@ func newDistro(distroName string) distro.Distro {
 		packageSetChains: map[string][]string{
 			osPkgsKey: {osPkgsKey, blueprintPkgsKey},
 		},
-		defaultImageConfig:  defaultEc2SapImageConfigX86_64,
-		kernelOptions:       "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 processor.max_cstate=1 intel_idle.max_cstate=1",
-		bootable:            true,
-		bootType:            distro.LegacyBootType,
-		defaultSize:         10 * GigaByte,
-		pipelines:           rhelEc2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "archive"},
-		exports:             []string{"archive"},
+		defaultImageConfig: defaultEc2SapImageConfigX86_64,
+		kernelOptions:      "console=ttyS0,115200n8 console=tty0 net.ifnames=0 rd.blacklist=nouveau nvme_core.io_timeout=4294967295 processor.max_cstate=1 intel_idle.max_cstate=1",
+		bootable:           true,
+		bootType:           distro.LegacyBootType,
+		defaultSize:        10 * GigaByte,
+		pipelines:          rhelEc2Pipelines,
+		buildPipelines:     []string{"build"},
+		payloadPipelines:   []string{"os", "image", "archive"},
+		exports:            []string{"archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWS: "archive",
+		},
+		filenameByExport: map[string]string{
+			"archive": "image.raw.xz",
+		},
+		mimeTypeByExport: map[string]string{
+			"archive": "application/xz",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
@@ -1679,9 +1830,7 @@ func newDistro(distroName string) distro.Distro {
 	}
 
 	gceImgType := imageType{
-		name:     "gce",
-		filename: "image.tar.gz",
-		mimeType: "application/gzip",
+		name: "gce",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey:    gcePackageSet,
@@ -1689,22 +1838,29 @@ func newDistro(distroName string) distro.Distro {
 		packageSetChains: map[string][]string{
 			osPkgsKey: {osPkgsKey, blueprintPkgsKey},
 		},
-		defaultImageConfig:  defaultGceImageConfig,
-		kernelOptions:       "net.ifnames=0 biosdevname=0 scsi_mod.use_blk_mq=Y console=ttyS0,38400n8d",
-		bootable:            true,
-		bootType:            distro.UEFIBootType,
-		defaultSize:         20 * GigaByte,
-		pipelines:           gcePipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "archive"},
-		exports:             []string{"archive"},
+		defaultImageConfig: defaultGceImageConfig,
+		kernelOptions:      "net.ifnames=0 biosdevname=0 scsi_mod.use_blk_mq=Y console=ttyS0,38400n8d",
+		bootable:           true,
+		bootType:           distro.UEFIBootType,
+		defaultSize:        20 * GigaByte,
+		pipelines:          gcePipelines,
+		buildPipelines:     []string{"build"},
+		payloadPipelines:   []string{"os", "image", "archive"},
+		exports:            []string{"archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameGCP: "archive",
+		},
+		filenameByExport: map[string]string{
+			"archive": "image.tar.gz",
+		},
+		mimeTypeByExport: map[string]string{
+			"archive": "application/gzip",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	tarImgType := imageType{
-		name:     "tar",
-		filename: "root.tar.xz",
-		mimeType: "application/x-tar",
+		name: "tar",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey: func(t *imageType) rpmmd.PackageSet {
@@ -1721,11 +1877,18 @@ func newDistro(distroName string) distro.Distro {
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"os", "root-tar"},
 		exports:          []string{"root-tar"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "root-tar",
+		},
+		filenameByExport: map[string]string{
+			"root-tar": "root.tar.xz",
+		},
+		mimeTypeByExport: map[string]string{
+			"root-tar": "application/x-tar",
+		},
 	}
 	imageInstaller := imageType{
-		name:     "image-installer",
-		filename: "installer.iso",
-		mimeType: "application/x-iso9660-image",
+		name: "image-installer",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey:     anacondaBuildPackageSet,
 			osPkgsKey:        bareMetalPackageSet,
@@ -1741,6 +1904,15 @@ func newDistro(distroName string) distro.Distro {
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"os", "anaconda-tree", "bootiso-tree", "bootiso"},
 		exports:          []string{"bootiso"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "bootiso",
+		},
+		filenameByExport: map[string]string{
+			"bootiso": "installer.iso",
+		},
+		mimeTypeByExport: map[string]string{
+			"bootiso": "application/x-iso9660-image",
+		},
 	}
 
 	ociImgType := qcow2ImgType

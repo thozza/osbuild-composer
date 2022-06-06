@@ -14,6 +14,7 @@ import (
 	"github.com/osbuild/osbuild-composer/internal/disk"
 	"github.com/osbuild/osbuild-composer/internal/ostree"
 	"github.com/osbuild/osbuild-composer/internal/rpmmd"
+	"github.com/osbuild/osbuild-composer/internal/target"
 )
 
 const (
@@ -88,8 +89,14 @@ type ImageType interface {
 	// Returns the canonical filename for the image type.
 	Filename() string
 
-	// Retrns the MIME-type for the image type.
+	// Returns the canonical filename for the image type based on the export pipeline.
+	FilenameByExport(export string) (string, error)
+
+	// Returns the MIME-type for the image type.
 	MIMEType() string
+
+	// Returns the MIME-type for the image type based on the export pipeline.
+	MIMETypeByExport(export string) (string, error)
 
 	// Returns the default OSTree ref for the image type.
 	OSTreeRef() string
@@ -119,8 +126,11 @@ type ImageType interface {
 	// Returns named arrays of package set names which should be depsolved in a chain.
 	PackageSetsChains() map[string][]string
 
-	// Returns the names of the stages that will produce the build output.
+	// Returns the names of the pipelines that will produce the build output.
 	Exports() []string
+
+	// Returns the name of the pipeline, that will produce the build output for the given upload target.
+	ExportByTarget(target target.TargetName) (string, error)
 
 	// Returns an osbuild manifest, containing the sources and pipeline necessary
 	// to build an image, given output format with all packages and customizations

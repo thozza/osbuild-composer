@@ -14,6 +14,7 @@ import (
 	"github.com/osbuild/osbuild-composer/internal/distro"
 	osbuild "github.com/osbuild/osbuild-composer/internal/osbuild2"
 	"github.com/osbuild/osbuild-composer/internal/rpmmd"
+	"github.com/osbuild/osbuild-composer/internal/target"
 )
 
 const (
@@ -73,8 +74,6 @@ var (
 	iotCommitImgType = imageType{
 		name:        "fedora-iot-commit",
 		nameAliases: []string{"iot-commit"},
-		filename:    "commit.tar",
-		mimeType:    "application/x-tar",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: iotBuildPackageSet,
 			osPkgsKey:    iotCommitPackageSet,
@@ -90,13 +89,20 @@ var (
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"ostree-tree", "ostree-commit", "commit-archive"},
 		exports:          []string{"commit-archive"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "commit-archive",
+		},
+		filenameByExport: map[string]string{
+			"commit-archive": "commit.tar",
+		},
+		mimeTypeByExport: map[string]string{
+			"commit-archive": "application/x-tar",
+		},
 	}
 
 	iotOCIImgType = imageType{
 		name:        "fedora-iot-container",
 		nameAliases: []string{"iot-container"},
-		filename:    "container.tar",
-		mimeType:    "application/x-tar",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: iotBuildPackageSet,
 			osPkgsKey:    iotCommitPackageSet,
@@ -118,13 +124,20 @@ var (
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"ostree-tree", "ostree-commit", "container-tree", "container"},
 		exports:          []string{"container"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "container",
+		},
+		filenameByExport: map[string]string{
+			"container": "container.tar",
+		},
+		mimeTypeByExport: map[string]string{
+			"container": "application/x-tar",
+		},
 	}
 
 	iotInstallerImgType = imageType{
 		name:        "fedora-iot-installer",
 		nameAliases: []string{"iot-installer"},
-		filename:    "installer.iso",
-		mimeType:    "application/x-iso9660-image",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey:     iotInstallerBuildPackageSet,
 			osPkgsKey:        iotCommitPackageSet,
@@ -143,12 +156,19 @@ var (
 		buildPipelines:   []string{"build"},
 		payloadPipelines: []string{"anaconda-tree", "bootiso-tree", "bootiso"},
 		exports:          []string{"bootiso"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "bootiso",
+		},
+		filenameByExport: map[string]string{
+			"bootiso": "installer.iso",
+		},
+		mimeTypeByExport: map[string]string{
+			"bootiso": "application/x-iso9660-image",
+		},
 	}
 
 	qcow2ImgType = imageType{
-		name:     "qcow2",
-		filename: "disk.qcow2",
-		mimeType: "application/x-qemu-disk",
+		name: "qcow2",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey:    qcow2CommonPackageSet,
@@ -165,20 +185,27 @@ var (
 				"cloud-init-local.service",
 			},
 		},
-		kernelOptions:       defaultKernelOptions,
-		bootable:            true,
-		defaultSize:         2 * GigaByte,
-		pipelines:           qcow2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "qcow2"},
-		exports:             []string{"qcow2"},
+		kernelOptions:    defaultKernelOptions,
+		bootable:         true,
+		defaultSize:      2 * GigaByte,
+		pipelines:        qcow2Pipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "qcow2"},
+		exports:          []string{"qcow2"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "qcow2",
+		},
+		filenameByExport: map[string]string{
+			"qcow2": "disk.qcow2",
+		},
+		mimeTypeByExport: map[string]string{
+			"qcow2": "application/x-qemu-disk",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	vhdImgType = imageType{
-		name:     "vhd",
-		filename: "disk.vhd",
-		mimeType: "application/x-vhd",
+		name: "vhd",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey:    vhdCommonPackageSet,
@@ -198,20 +225,27 @@ var (
 				"loadmodules.service",
 			},
 		},
-		kernelOptions:       defaultKernelOptions,
-		bootable:            true,
-		defaultSize:         2 * GigaByte,
-		pipelines:           vhdPipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "vpc"},
-		exports:             []string{"vpc"},
+		kernelOptions:    defaultKernelOptions,
+		bootable:         true,
+		defaultSize:      2 * GigaByte,
+		pipelines:        vhdPipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "vpc"},
+		exports:          []string{"vpc"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "vpc",
+		},
+		filenameByExport: map[string]string{
+			"vpc": "disk.vhd",
+		},
+		mimeTypeByExport: map[string]string{
+			"vpc": "application/x-vhd",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	vmdkImgType = imageType{
-		name:     "vmdk",
-		filename: "disk.vmdk",
-		mimeType: "application/x-vmdk",
+		name: "vmdk",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey:    vmdkCommonPackageSet,
@@ -228,20 +262,27 @@ var (
 				"cloud-init-local.service",
 			},
 		},
-		kernelOptions:       defaultKernelOptions,
-		bootable:            true,
-		defaultSize:         2 * GigaByte,
-		pipelines:           vmdkPipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "vmdk"},
-		exports:             []string{"vmdk"},
+		kernelOptions:    defaultKernelOptions,
+		bootable:         true,
+		defaultSize:      2 * GigaByte,
+		pipelines:        vmdkPipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "vmdk"},
+		exports:          []string{"vmdk"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "vmdk",
+		},
+		filenameByExport: map[string]string{
+			"vmdk": "disk.vmdk",
+		},
+		mimeTypeByExport: map[string]string{
+			"vmdk": "application/x-vmdk",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
 	openstackImgType = imageType{
-		name:     "openstack",
-		filename: "disk.qcow2",
-		mimeType: "application/x-qemu-disk",
+		name: "openstack",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: distroBuildPackageSet,
 			osPkgsKey:    openstackCommonPackageSet,
@@ -258,13 +299,22 @@ var (
 				"cloud-init-local.service",
 			},
 		},
-		kernelOptions:       defaultKernelOptions,
-		bootable:            true,
-		defaultSize:         2 * GigaByte,
-		pipelines:           openstackPipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image", "qcow2"},
-		exports:             []string{"qcow2"},
+		kernelOptions:    defaultKernelOptions,
+		bootable:         true,
+		defaultSize:      2 * GigaByte,
+		pipelines:        openstackPipelines,
+		buildPipelines:   []string{"build"},
+		payloadPipelines: []string{"os", "image", "qcow2"},
+		exports:          []string{"qcow2"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWSS3: "qcow2",
+		},
+		filenameByExport: map[string]string{
+			"qcow2": "disk.qcow2",
+		},
+		mimeTypeByExport: map[string]string{
+			"qcow2": "application/x-qemu-disk",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 
@@ -277,9 +327,7 @@ var (
 	}
 
 	amiImgType = imageType{
-		name:     "ami",
-		filename: "image.raw",
-		mimeType: "application/octet-stream",
+		name: "ami",
 		packageSets: map[string]packageSetFunc{
 			buildPkgsKey: ec2BuildPackageSet,
 			osPkgsKey:    ec2CommonPackageSet,
@@ -287,15 +335,24 @@ var (
 		packageSetChains: map[string][]string{
 			osPkgsKey: {osPkgsKey, blueprintPkgsKey},
 		},
-		defaultImageConfig:  defaultEc2ImageConfig,
-		kernelOptions:       defaultKernelOptions,
-		bootable:            true,
-		bootType:            distro.LegacyBootType,
-		defaultSize:         6 * GigaByte,
-		pipelines:           ec2Pipelines,
-		buildPipelines:      []string{"build"},
-		payloadPipelines:    []string{"os", "image"},
-		exports:             []string{"image"},
+		defaultImageConfig: defaultEc2ImageConfig,
+		kernelOptions:      defaultKernelOptions,
+		bootable:           true,
+		bootType:           distro.LegacyBootType,
+		defaultSize:        6 * GigaByte,
+		pipelines:          ec2Pipelines,
+		buildPipelines:     []string{"build"},
+		payloadPipelines:   []string{"os", "image"},
+		exports:            []string{"image"},
+		exportByTarget: map[target.TargetName]string{
+			target.TargetNameAWS: "image",
+		},
+		filenameByExport: map[string]string{
+			"image": "image.raw",
+		},
+		mimeTypeByExport: map[string]string{
+			"image": "application/octet-stream",
+		},
 		basePartitionTables: defaultBasePartitionTables,
 	}
 )
@@ -479,8 +536,8 @@ type imageType struct {
 	arch               *architecture
 	name               string
 	nameAliases        []string
-	filename           string
-	mimeType           string
+	filenameByExport   map[string]string
+	mimeTypeByExport   map[string]string
 	packageSets        map[string]packageSetFunc
 	packageSetChains   map[string][]string
 	defaultImageConfig *distro.ImageConfig
@@ -489,6 +546,7 @@ type imageType struct {
 	buildPipelines     []string
 	payloadPipelines   []string
 	exports            []string
+	exportByTarget     map[target.TargetName]string
 	pipelines          pipelinesFunc
 
 	// bootISO: installable ISO
@@ -512,11 +570,45 @@ func (t *imageType) Arch() distro.Arch {
 }
 
 func (t *imageType) Filename() string {
-	return t.filename
+	// As the backward compatibility, return the filename for the first export
+	filename, err := t.FilenameByExport(t.exports[0])
+	if err != nil {
+		panic(err)
+	}
+	return filename
+}
+
+func (t *imageType) FilenameByExport(export string) (string, error) {
+	filename, ok := t.filenameByExport[export]
+	if !ok {
+		return "", fmt.Errorf("filename for the %q export is not defined", export)
+	}
+	return filename, nil
 }
 
 func (t *imageType) MIMEType() string {
-	return t.mimeType
+	// As the backward compatibility, return the mimetype for the first export
+	mimeType, err := t.MIMETypeByExport(t.exports[0])
+	if err != nil {
+		panic(err)
+	}
+	return mimeType
+}
+
+func (t *imageType) MIMETypeByExport(export string) (string, error) {
+	mimeType, ok := t.mimeTypeByExport[export]
+	if !ok {
+		return "", fmt.Errorf("MIMEType for the %q export is not defined", export)
+	}
+	return mimeType, nil
+}
+
+func (t *imageType) ExportByTarget(target target.TargetName) (string, error) {
+	export, ok := t.exportByTarget[target]
+	if !ok {
+		return "", fmt.Errorf("target %q is not supported by the %q image type", target, t.Name())
+	}
+	return export, nil
 }
 
 func (t *imageType) OSTreeRef() string {
