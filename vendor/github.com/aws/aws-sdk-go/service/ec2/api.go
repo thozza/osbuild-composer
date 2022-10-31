@@ -7148,9 +7148,10 @@ func (c *EC2) CreateReplaceRootVolumeTaskRequest(input *CreateReplaceRootVolumeT
 
 // CreateReplaceRootVolumeTask API operation for Amazon Elastic Compute Cloud.
 //
-// Creates a root volume replacement task for an Amazon EC2 instance. The root
-// volume can either be restored to its initial launch state, or it can be restored
-// using a specific snapshot.
+// Replaces the EBS-backed root volume for a running instance with a new volume
+// that is restored to the original root volume's launch state, that is restored
+// to a specific snapshot taken from the original root volume, or that is restored
+// from an AMI that has the same key characteristics as that of the instance.
 //
 // For more information, see Replace a root volume (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-restoring-volume.html#replace-root)
 // in the Amazon Elastic Compute Cloud User Guide.
@@ -67510,11 +67511,25 @@ type CreateReplaceRootVolumeTaskInput struct {
 	// Ensuring idempotency (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html).
 	ClientToken *string `type:"string" idempotencyToken:"true"`
 
+	// Indicates whether to automatically delete the original root volume after
+	// the root volume replacement task completes. To delete the original root volume,
+	// specify true. If you choose to keep the original root volume after the replacement
+	// task completes, you must manually delete it when you no longer need it.
+	DeleteReplacedRootVolume *bool `type:"boolean"`
+
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have
 	// the required permissions, the error response is DryRunOperation. Otherwise,
 	// it is UnauthorizedOperation.
 	DryRun *bool `type:"boolean"`
+
+	// The ID of the AMI to use to restore the root volume. The specified AMI must
+	// have the same product code, billing information, architecture type, and virtualization
+	// type as that of the instance.
+	//
+	// If you want to restore the replacement volume from a specific snapshot, or
+	// if you want to restore it to its launch state, omit this parameter.
+	ImageId *string `type:"string"`
 
 	// The ID of the instance for which to replace the root volume.
 	//
@@ -67522,8 +67537,12 @@ type CreateReplaceRootVolumeTaskInput struct {
 	InstanceId *string `type:"string" required:"true"`
 
 	// The ID of the snapshot from which to restore the replacement root volume.
-	// If you want to restore the volume to the initial launch state, omit this
-	// parameter.
+	// The specified snapshot must be a snapshot that you previously created from
+	// the original root volume.
+	//
+	// If you want to restore the replacement root volume to the initial launch
+	// state, or if you want to restore the replacement root volume from an AMI,
+	// omit this parameter.
 	SnapshotId *string `type:"string"`
 
 	// The tags to apply to the root volume replacement task.
@@ -67567,9 +67586,21 @@ func (s *CreateReplaceRootVolumeTaskInput) SetClientToken(v string) *CreateRepla
 	return s
 }
 
+// SetDeleteReplacedRootVolume sets the DeleteReplacedRootVolume field's value.
+func (s *CreateReplaceRootVolumeTaskInput) SetDeleteReplacedRootVolume(v bool) *CreateReplaceRootVolumeTaskInput {
+	s.DeleteReplacedRootVolume = &v
+	return s
+}
+
 // SetDryRun sets the DryRun field's value.
 func (s *CreateReplaceRootVolumeTaskInput) SetDryRun(v bool) *CreateReplaceRootVolumeTaskInput {
 	s.DryRun = &v
+	return s
+}
+
+// SetImageId sets the ImageId field's value.
+func (s *CreateReplaceRootVolumeTaskInput) SetImageId(v string) *CreateReplaceRootVolumeTaskInput {
+	s.ImageId = &v
 	return s
 }
 
@@ -143965,11 +143996,21 @@ type ReplaceRootVolumeTask struct {
 	// The time the task completed.
 	CompleteTime *string `locationName:"completeTime" type:"string"`
 
+	// Indicates whether the original root volume is to be deleted after the root
+	// volume replacement task completes.
+	DeleteReplacedRootVolume *bool `locationName:"deleteReplacedRootVolume" type:"boolean"`
+
+	// The ID of the AMI used to create the replacement root volume.
+	ImageId *string `locationName:"imageId" type:"string"`
+
 	// The ID of the instance for which the root volume replacement task was created.
 	InstanceId *string `locationName:"instanceId" type:"string"`
 
 	// The ID of the root volume replacement task.
 	ReplaceRootVolumeTaskId *string `locationName:"replaceRootVolumeTaskId" type:"string"`
+
+	// The ID of the snapshot used to create the replacement root volume.
+	SnapshotId *string `locationName:"snapshotId" type:"string"`
 
 	// The time the task was started.
 	StartTime *string `locationName:"startTime" type:"string"`
@@ -144024,6 +144065,18 @@ func (s *ReplaceRootVolumeTask) SetCompleteTime(v string) *ReplaceRootVolumeTask
 	return s
 }
 
+// SetDeleteReplacedRootVolume sets the DeleteReplacedRootVolume field's value.
+func (s *ReplaceRootVolumeTask) SetDeleteReplacedRootVolume(v bool) *ReplaceRootVolumeTask {
+	s.DeleteReplacedRootVolume = &v
+	return s
+}
+
+// SetImageId sets the ImageId field's value.
+func (s *ReplaceRootVolumeTask) SetImageId(v string) *ReplaceRootVolumeTask {
+	s.ImageId = &v
+	return s
+}
+
 // SetInstanceId sets the InstanceId field's value.
 func (s *ReplaceRootVolumeTask) SetInstanceId(v string) *ReplaceRootVolumeTask {
 	s.InstanceId = &v
@@ -144033,6 +144086,12 @@ func (s *ReplaceRootVolumeTask) SetInstanceId(v string) *ReplaceRootVolumeTask {
 // SetReplaceRootVolumeTaskId sets the ReplaceRootVolumeTaskId field's value.
 func (s *ReplaceRootVolumeTask) SetReplaceRootVolumeTaskId(v string) *ReplaceRootVolumeTask {
 	s.ReplaceRootVolumeTaskId = &v
+	return s
+}
+
+// SetSnapshotId sets the SnapshotId field's value.
+func (s *ReplaceRootVolumeTask) SetSnapshotId(v string) *ReplaceRootVolumeTask {
+	s.SnapshotId = &v
 	return s
 }
 
