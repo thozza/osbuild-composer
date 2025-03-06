@@ -253,3 +253,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/osbuild/images => github.com/thozza/osbuild-images v0.0.0-20250306091955-352be861292d

@@ -1037,8 +1037,9 @@ github.com/oracle/oci-go-sdk/v54/identity
 github.com/oracle/oci-go-sdk/v54/objectstorage
 github.com/oracle/oci-go-sdk/v54/objectstorage/transfer
 github.com/oracle/oci-go-sdk/v54/workrequests
-# github.com/osbuild/images v0.120.0
+# github.com/osbuild/images v0.120.0 => github.com/thozza/osbuild-images v0.0.0-20250306091955-352be861292d
 ## explicit; go 1.22.8
+github.com/osbuild/images/data/dependencies
 github.com/osbuild/images/data/repositories
 github.com/osbuild/images/internal/common
 github.com/osbuild/images/internal/environment
@@ -1073,6 +1074,7 @@ github.com/osbuild/images/pkg/distro/test_distro
 github.com/osbuild/images/pkg/distrofactory
 github.com/osbuild/images/pkg/distroidparser
 github.com/osbuild/images/pkg/dnfjson
+github.com/osbuild/images/pkg/experimentalflags
 github.com/osbuild/images/pkg/image
 github.com/osbuild/images/pkg/manifest
 github.com/osbuild/images/pkg/osbuild
@@ -1683,3 +1685,4 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
+# github.com/osbuild/images => github.com/thozza/osbuild-images v0.0.0-20250306091955-352be861292d

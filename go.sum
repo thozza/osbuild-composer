@@ -547,8 +547,6 @@ github.com/openshift-online/ocm-sdk-go v0.1.438 h1:tsLCCUzbLCTL4RZG02y9RuopmGCXp
 github.com/openshift-online/ocm-sdk-go v0.1.438/go.mod h1:CiAu2jwl3ITKOxkeV0Qnhzv4gs35AmpIzVABQLtcI2Y=
 github.com/oracle/oci-go-sdk/v54 v54.0.0 h1:CDLjeSejv2aDpElAJrhKpi6zvT/zhZCZuXchUUZ+LS4=
 github.com/oracle/oci-go-sdk/v54 v54.0.0/go.mod h1:+t+yvcFGVp+3ZnztnyxqXfQDsMlq8U25faBLa+mqCMc=
-github.com/osbuild/images v0.120.0 h1:6zXCp59AG03qajZlg/GJ07Fr4E6z5qaZshOuWgAse7g=
-github.com/osbuild/images v0.120.0/go.mod h1:Ag87vmyxooiPQBJEDILbypG8/SRIear75YA78NwLix0=
 github.com/osbuild/osbuild-composer/pkg/splunk_logger v0.0.0-20240814102216-0239db53236d h1:r9BFPDv0uuA9k1947Jybcxs36c/pTywWS1gjeizvtcQ=
 github.com/osbuild/osbuild-composer/pkg/splunk_logger v0.0.0-20240814102216-0239db53236d/go.mod h1:zR1iu/hOuf+OQNJlk70tju9IqzzM4ycq0ectkFBm94U=
 github.com/osbuild/pulp-client v0.1.0 h1:L0C4ezBJGTamN3BKdv+rKLuq/WxXJbsFwz/Hj7aEmJ8=
@@ -646,6 +644,8 @@ github.com/sylabs/sif/v2 v2.20.2 h1:HGEPzauCHhIosw5o6xmT3jczuKEuaFzSfdjAsH33vYw=
 github.com/sylabs/sif/v2 v2.20.2/go.mod h1:WyYryGRaR4Wp21SAymm5pK0p45qzZCSRiZMFvUZiuhc=
 github.com/tchap/go-patricia/v2 v2.3.2 h1:xTHFutuitO2zqKAQ5rCROYgUb7Or/+IC3fts9/Yc7nM=
 github.com/tchap/go-patricia/v2 v2.3.2/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
+github.com/thozza/osbuild-images v0.0.0-20250306091955-352be861292d h1:mAeTnjNWxO3Js60zOIBKP9pJIsSutW3u/hdaAZjPACQ=
+github.com/thozza/osbuild-images v0.0.0-20250306091955-352be861292d/go.mod h1:Ag87vmyxooiPQBJEDILbypG8/SRIear75YA78NwLix0=
 github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 h1:e/5i7d4oYZ+C1wj2THlRK+oAhjeS/TRQwMfkIuet3w0=
 github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399/go.mod h1:LdwHTNJT99C5fTAzDz0ud328OgXz+gierycbcIx2fRs=
 github.com/ubccr/kerby v0.0.0-20230802201021-412be7bfaee5 h1:EHD1FdySQ5yrgq2Zl1ArSuQoyOhnHXHk913ByaCxn6Q=
