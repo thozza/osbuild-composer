@@ -1,0 +1,14 @@
+name: Check osbuild/images dependencies in spec file
+
+on: [pull_request]
+
+jobs:
+  check-on-fedora:
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Check dependencies in spec file
+      uses: thozza/osbuild-images@check-deps-action
