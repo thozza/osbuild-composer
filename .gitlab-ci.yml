@@ -1,6 +1,7 @@
 stages:
   - init
   - build
+  - build-success-notify
   - prepare-rhel-internal
   - test
   - finish
@@ -150,6 +151,32 @@ Container:
     matrix:
       - RUNNER:
           - aws/rhel-8.10-ga-x86_64
+
+# Notify GitHub about build success.
+# This is useful for GH actions that need to depend on artifacts uploaded to S3 in the build stage.
+# See https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+Build success notify GitHub:
+  stage: build-success-notify
+  tags:
+    - shell
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule"'
+  script:
+    - |
+      # Deduce the PR number from the branch name, it is in the form of "PR-<PR_NUMBER>"
+      if [[ ! "${CI_COMMIT_BRANCH}" =~ ^PR-[0-9]+$ ]]; then
+        echo "This is not a PR branch, skipping GitHub notification."
+        echo "CI_COMMIT_BRANCH: ${CI_COMMIT_BRANCH}"
+        exit 0
+      fi
+      PR_NUMBER=$(echo "${CI_COMMIT_BRANCH}" | cut -d'-' -f 2)
+      curl \
+        -L \
+        -u "${SCHUTZBOT_LOGIN}" \
+        -X POST \
+        -H "Accept: application/vnd.github+json" \
+        https://api.github.com/repos/osbuild/osbuild-composer/dispatches \
+        -d "{\"event_type\": \"osbuild-composer-ci-build-success-notify\", \"client_payload\": {\"pr_number\": \"${PR_NUMBER}\"}}"
 
 Packer:
   stage: test
