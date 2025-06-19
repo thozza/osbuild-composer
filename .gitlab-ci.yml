@@ -1,6 +1,6 @@
 stages:
   - init
-  - rpmbuild
+  - build
   - prepare-rhel-internal
   - test
   - finish
@@ -99,7 +99,7 @@ init:
   INTERNAL_NETWORK: ["true"]
 
 RPM:
-  stage: rpmbuild
+  stage: build
   extends: .terraform
   rules:
     - !reference [.build_rules, rules]
@@ -124,7 +124,7 @@ RPM:
       - <<: *RPM_RUNNERS_RHEL
 
 Build -tests RPM for RHEL:
-  stage: rpmbuild
+  stage: build
   extends: .terraform
   rules:
     - !reference [.nightly_rules_all, rules]
@@ -139,7 +139,7 @@ Build -tests RPM for RHEL:
       - <<: *RPM_RUNNERS_RHEL
 
 Container:
-  stage: rpmbuild
+  stage: build
   extends: .terraform
   rules:
     - !reference [.upstream_and_ga_rules_all, rules]
