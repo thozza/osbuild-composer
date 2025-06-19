@@ -778,44 +778,6 @@ Upgrade:
           - rhos-01/rhel-9.7-nightly-x86_64-large
           - rhos-01/rhel-10.1-nightly-x86_64-large
 
-NIGHTLY_FAIL:
-  stage: finish
-  tags:
-    - shell
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $NIGHTLY == "true"'
-      when: on_failure
-  script:
-    - schutzbot/slack_notification.sh FAILED ":big-sad:" nightly
-
-NIGHTLY_SUCCESS:
-  stage: finish
-  tags:
-    - shell
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $NIGHTLY == "true"'
-  script:
-    - schutzbot/slack_notification.sh SUCCESS ":partymeow:" nightly
-
-GA_FAIL:
-  stage: finish
-  tags:
-    - shell
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $NIGHTLY== "false"'
-      when: on_failure
-  script:
-    - schutzbot/slack_notification.sh FAILED ":big-sad:" ga
-
-GA_SUCCESS:
-  stage: finish
-  tags:
-    - shell
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $NIGHTLY== "false"'
-  script:
-    - schutzbot/slack_notification.sh SUCCESS ":partymeow:" ga
-
 Installer:
   stage: test
   extends: .terraform/openstack
@@ -879,6 +841,44 @@ WorkerExecutor:
   variables:
     RUNNER: aws/fedora-41-x86_64
     IAM_INSTANCE_PROFILE: worker-executor
+
+NIGHTLY_FAIL:
+  stage: finish
+  tags:
+    - shell
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $NIGHTLY == "true"'
+      when: on_failure
+  script:
+    - schutzbot/slack_notification.sh FAILED ":big-sad:" nightly
+
+NIGHTLY_SUCCESS:
+  stage: finish
+  tags:
+    - shell
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $NIGHTLY == "true"'
+  script:
+    - schutzbot/slack_notification.sh SUCCESS ":partymeow:" nightly
+
+GA_FAIL:
+  stage: finish
+  tags:
+    - shell
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $NIGHTLY== "false"'
+      when: on_failure
+  script:
+    - schutzbot/slack_notification.sh FAILED ":big-sad:" ga
+
+GA_SUCCESS:
+  stage: finish
+  tags:
+    - shell
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $NIGHTLY== "false"'
+  script:
+    - schutzbot/slack_notification.sh SUCCESS ":partymeow:" ga
 
 finish:
   stage: finish
