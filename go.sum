@@ -520,8 +520,6 @@ github.com/oracle/oci-go-sdk/v54 v54.0.0 h1:CDLjeSejv2aDpElAJrhKpi6zvT/zhZCZuXch
 github.com/oracle/oci-go-sdk/v54 v54.0.0/go.mod h1:+t+yvcFGVp+3ZnztnyxqXfQDsMlq8U25faBLa+mqCMc=
 github.com/osbuild/blueprint v1.13.0 h1:blo22+S2ZX5bBmjGcRveoTUrV4Ms7kLfKyb32WyuymA=
 github.com/osbuild/blueprint v1.13.0/go.mod h1:HPlJzkEl7q5g8hzaGksUk7ifFAy9QFw9LmzhuFOAVm4=
-github.com/osbuild/images v0.202.0 h1:OPvfmr5RJHcOJgU8Win6kHyoCNQZEiILlgIDI64/YIM=
-github.com/osbuild/images v0.202.0/go.mod h1:xkXfw5CIy0bVNTNdB6GXiewu/IzBgpofkItDJPAzGA4=
 github.com/osbuild/osbuild-composer/pkg/splunk_logger v0.0.0-20240814102216-0239db53236d h1:r9BFPDv0uuA9k1947Jybcxs36c/pTywWS1gjeizvtcQ=
 github.com/osbuild/osbuild-composer/pkg/splunk_logger v0.0.0-20240814102216-0239db53236d/go.mod h1:zR1iu/hOuf+OQNJlk70tju9IqzzM4ycq0ectkFBm94U=
 github.com/perimeterx/marshmallow v1.1.5 h1:a2LALqQ1BlHM8PZblsDdidgv1mWi1DgC2UmX50IvK2s=
@@ -620,6 +618,8 @@ github.com/sylabs/sif/v2 v2.21.1 h1:GZ0b5//AFAqJEChd8wHV/uSKx/l1iuGYwjR8nx+4wPI=
 github.com/sylabs/sif/v2 v2.21.1/go.mod h1:YoqEGQnb5x/ItV653bawXHZJOXQaEWpGwHsSD3YePJI=
 github.com/tchap/go-patricia/v2 v2.3.3 h1:xfNEsODumaEcCcY3gI0hYPZ/PcpVv5ju6RMAhgwZDDc=
 github.com/tchap/go-patricia/v2 v2.3.3/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
+github.com/thozza/osbuild-images v0.0.0-20251007191641-ccdd29658115 h1:cjIYJDR37WYzKpyNT/jn+XXt3aIfDJdG1qvXl5nY/JU=
+github.com/thozza/osbuild-images v0.0.0-20251007191641-ccdd29658115/go.mod h1:xkXfw5CIy0bVNTNdB6GXiewu/IzBgpofkItDJPAzGA4=
 github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 h1:e/5i7d4oYZ+C1wj2THlRK+oAhjeS/TRQwMfkIuet3w0=
 github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399/go.mod h1:LdwHTNJT99C5fTAzDz0ud328OgXz+gierycbcIx2fRs=
 github.com/ubccr/kerby v0.0.0-20230802201021-412be7bfaee5 h1:EHD1FdySQ5yrgq2Zl1ArSuQoyOhnHXHk913ByaCxn6Q=
