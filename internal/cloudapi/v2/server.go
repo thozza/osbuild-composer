@@ -23,9 +23,11 @@ import (
 
 	"github.com/osbuild/osbuild-composer/pkg/jobqueue"
 
+	"github.com/osbuild/images/pkg/arch"
 	"github.com/osbuild/images/pkg/container"
 	"github.com/osbuild/images/pkg/depsolvednf"
 	"github.com/osbuild/images/pkg/distro"
+	"github.com/osbuild/images/pkg/distro/generic"
 	"github.com/osbuild/images/pkg/distrofactory"
 	"github.com/osbuild/images/pkg/manifest"
 	"github.com/osbuild/images/pkg/ostree"
@@ -97,6 +99,13 @@ func NewServer(workers *worker.Server, distros *distrofactory.Factory, repos *re
 		goroutinesCtx:       ctx,
 		goroutinesCtxCancel: cancel,
 	}
+
+	server.goroutinesGroup.Add(1)
+	go func() {
+		defer server.goroutinesGroup.Done()
+		server.bootcPreManifestLoop()
+	}()
+
 	return server
 }
 
@@ -748,4 +757,262 @@ func serializeManifest(ctx context.Context, manifestSource *manifest.Manifest, w
 	}
 
 	jobResult.Manifest = ms
+}
+
+// bootcPreManifestLoop is a long-running goroutine started at server init
+// that picks up pending BootcPreManifest jobs via RequestJob and spawns a
+// goroutine per job for parallel processing.
+func (s *Server) bootcPreManifestLoop() {
+	const maxConcurentPreManifestJobs = 8
+	sem := make(chan struct{}, maxConcurentPreManifestJobs)
+
+	for {
+		// Pass empty channel for on-prem (no tenant).
+		// TODO: Multi-tenant deployments with JWT-based channels will need this
+		// updated to enumerate tenant channels or use a different mechanism.
+		jobID, token, _, staticArgs, dynArgs, err := s.workers.RequestJob(
+			s.goroutinesCtx, "", []string{worker.JobTypeBootcPreManifest}, []string{""}, uuid.Nil,
+		)
+		if err != nil {
+			if s.goroutinesCtx.Err() != nil {
+				return // server shutting down
+			}
+			continue // timeout or transient error — retry
+		}
+
+		sem <- struct{}{}
+		s.goroutinesGroup.Add(1)
+		go func() {
+			defer func() { <-sem }()
+			defer s.goroutinesGroup.Done()
+			handleBootcPreManifest(s.workers, jobID, token, staticArgs, dynArgs)
+		}()
+	}
+}
+
+// handleBootcPreManifest processes a single BootcPreManifest job. The goal is to
+// generate a pre-manifest from resolved bootc container to get the sources for
+// downstream resolve jobs.
+//
+// The job is processed in the following steps:
+// 1. Reads resolved bootc container info from dynArgs.
+// 2. Creates a bootc distro.
+// 3. Generates a pre-manifest.
+// 4. Extracts container source specs for downstream resolve jobs.
+// 5. Validates that the bootc image type does not unexpectedly require packages or ostree commits.
+func handleBootcPreManifest(
+	workers *worker.Server,
+	jobID uuid.UUID,
+	token uuid.UUID,
+	staticArgs json.RawMessage,
+	dynArgs []json.RawMessage,
+) {
+	logWithId := logrus.WithField("jobId", jobID)
+
+	var preManifestResult worker.BootcPreManifestJobResult
+	defer func() {
+		if r := recover(); r != nil {
+			logWithId.Errorf("Recovered from panic in handleBootcPreManifest: %v", r)
+			preManifestResult.JobError = clienterrors.New(clienterrors.ErrorJobPanicked, "Error extracting sources from pre-manifest", r)
+		}
+
+		result, err := json.Marshal(preManifestResult)
+		if err != nil {
+			logWithId.Errorf("Error marshalling bootc pre-manifest result: %v", err)
+		}
+		if err := workers.FinishJob(token, result); err != nil {
+			logWithId.Errorf("Error finishing bootc pre-manifest job: %v", err)
+		}
+	}()
+
+	var preManifestArgs worker.BootcPreManifestJob
+	if err := json.Unmarshal(staticArgs, &preManifestArgs); err != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorParsingJobArgs,
+			"Error parsing bootc pre-manifest job args: "+err.Error(), nil,
+		)
+		return
+	}
+
+	// Read base BootcInfoResolve result using explicit index
+	if preManifestArgs.BootcBaseResolveDynArgsIdx == nil ||
+		*preManifestArgs.BootcBaseResolveDynArgsIdx >= len(dynArgs) {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorParsingDynamicArgs,
+			"BootcBaseResolveDynArgsIdx is missing or out of range", nil,
+		)
+		return
+	}
+	var bootcBaseResult worker.BootcInfoResolveJobResult
+	if err := json.Unmarshal(dynArgs[*preManifestArgs.BootcBaseResolveDynArgsIdx], &bootcBaseResult); err != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorParsingDynamicArgs,
+			"Error parsing base bootc info resolve result: "+err.Error(), nil,
+		)
+		return
+	}
+	if bootcBaseResult.JobError != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorJobDependency,
+			"Base bootc info resolve dependency failed", bootcBaseResult.JobError.Reason,
+		)
+		return
+	}
+	if bootcBaseResult.Info == nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorJobDependency,
+			"Base bootc info resolve result has no info", nil,
+		)
+		return
+	}
+
+	// Convert DTO to vendor type for distro creation
+	baseInfo, err := bootcBaseResult.Info.ToVendor()
+	if err != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"Error converting base bootc info to vendor type: "+err.Error(), nil,
+		)
+		return
+	}
+
+	// Create bootc distro from base container info
+	bootcDistro, err := generic.NewBootc("bootc", baseInfo)
+	if err != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"Error creating bootc distro: "+err.Error(), nil,
+		)
+		return
+	}
+
+	// Set build container if a separate build info resolve exists
+	if preManifestArgs.BootcBuildResolveDynArgsIdx != nil {
+		if *preManifestArgs.BootcBuildResolveDynArgsIdx >= len(dynArgs) {
+			preManifestResult.JobError = clienterrors.New(
+				clienterrors.ErrorParsingDynamicArgs,
+				"BootcBuildResolveDynArgsIdx is out of range", nil,
+			)
+			return
+		}
+		var bootcBuildResult worker.BootcInfoResolveJobResult
+		if err := json.Unmarshal(dynArgs[*preManifestArgs.BootcBuildResolveDynArgsIdx], &bootcBuildResult); err != nil {
+			preManifestResult.JobError = clienterrors.New(
+				clienterrors.ErrorParsingDynamicArgs,
+				"Error parsing build bootc info resolve result: "+err.Error(), nil,
+			)
+			return
+		}
+		if bootcBuildResult.JobError != nil {
+			preManifestResult.JobError = clienterrors.New(
+				clienterrors.ErrorJobDependency,
+				"Build bootc info resolve dependency failed", bootcBuildResult.JobError.Reason,
+			)
+			return
+		}
+		if bootcBuildResult.Info == nil {
+			preManifestResult.JobError = clienterrors.New(
+				clienterrors.ErrorJobDependency,
+				"Build bootc info resolve result has no info", nil,
+			)
+			return
+		}
+
+		buildInfo, err := bootcBuildResult.Info.ToVendor()
+		if err != nil {
+			preManifestResult.JobError = clienterrors.New(
+				clienterrors.ErrorManifestGeneration,
+				"Error converting build bootc info to vendor type: "+err.Error(), nil,
+			)
+			return
+		}
+
+		if err := bootcDistro.SetBuildContainer(buildInfo); err != nil {
+			preManifestResult.JobError = clienterrors.New(
+				clienterrors.ErrorManifestGeneration,
+				"Error setting build container: "+err.Error(), nil,
+			)
+			return
+		}
+	}
+
+	canonicalArch, err := arch.FromString(baseInfo.Arch)
+	if err != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"Error converting base bootc info to vendor type: "+err.Error(), nil,
+		)
+		return
+	}
+	archi, err := bootcDistro.GetArch(canonicalArch.String())
+	if err != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"Error getting arch from bootc distro: "+err.Error(), nil,
+		)
+		return
+	}
+	imgType, err := archi.GetImageType(preManifestArgs.ImageType)
+	if err != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"Error getting image type from bootc distro: "+err.Error(), nil,
+		)
+		return
+	}
+
+	// Generate pre-manifest.
+	// NOTE: Bootc image types ignore the repos parameter (all content comes from containers), so nil is safe.
+	manifestSource, _, err := imgType.Manifest(&preManifestArgs.Blueprint, preManifestArgs.ImageOptions, nil, &preManifestArgs.Seed)
+	if err != nil {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"Error generating bootc pre-manifest: "+err.Error(), nil,
+		)
+		return
+	}
+
+	// Bootc images should not require package depsolving or ostree commits.
+	// All content comes from containers. Error if the pre-manifest unexpectedly
+	// requests these - it means something is wrong with the image type definition.
+	pkgSets, _ := manifestSource.GetPackageSetChains()
+	if len(pkgSets) > 0 {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"bootc pre-manifest unexpectedly requires package depsolving", nil,
+		)
+		return
+	}
+	ostreeSources := manifestSource.GetOSTreeSourceSpecs()
+	if len(ostreeSources) > 0 {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"bootc pre-manifest unexpectedly requires ostree commit resolution", nil,
+		)
+		return
+	}
+
+	// Extract content sources into result
+	// Container sources - build ContainerResolveJob args from manifest content specs
+	containerSources := manifestSource.GetContainerSourceSpecs()
+
+	// Bootc image manifests should always return at least one container source.
+	if len(containerSources) == 0 {
+		preManifestResult.JobError = clienterrors.New(
+			clienterrors.ErrorManifestGeneration,
+			"bootc pre-manifest unexpectedly didn't return any container sources", nil,
+		)
+		return
+	}
+
+	var allSpecs []worker.ContainerSpec
+	for _, pipelineSources := range containerSources {
+		for _, source := range pipelineSources {
+			allSpecs = append(allSpecs, worker.ContainerSpecFromVendorSourceSpec(source))
+		}
+	}
+	preManifestResult.ContainerResolveJobArgs = &worker.ContainerResolveJob{
+		Arch:  canonicalArch.String(),
+		Specs: allSpecs,
+	}
 }
