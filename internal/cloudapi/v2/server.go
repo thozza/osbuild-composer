@@ -242,7 +242,7 @@ func (s *Server) enqueueResolveJobs(manifestSource *manifest.Manifest, it distro
 			Specs: workerResolveSpecs,
 		}
 
-		containerResolveJobID, err := s.workers.EnqueueContainerResolveJob(&job, channel)
+		containerResolveJobID, err := s.workers.EnqueueContainerResolveJob(&job, nil, channel)
 		if err != nil {
 			return jobDependencies, HTTPErrorWithInternal(ErrorEnqueueingJob, err)
 		}
