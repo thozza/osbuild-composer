@@ -3051,6 +3051,246 @@ func TestComposeIBManifest(t *testing.T) {
 	require.Equal(t, worker.JobTypeImageBuilderManifest, ibManifestJobID)
 }
 
+// newWorkerServer creates a standalone worker.Server for testing without
+// starting the v2 server's bootcPreManifestLoop.
+func newWorkerServer(t *testing.T) *worker.Server {
+	t.Helper()
+	tempdir := t.TempDir()
+	jobsDir := filepath.Join(tempdir, "jobs")
+	err := os.Mkdir(jobsDir, 0755)
+	require.NoError(t, err)
+	q, err := fsjobqueue.New(jobsDir)
+	require.NoError(t, err)
+	return worker.NewServer(nil, q, worker.Config{
+		BasePath: "/api/worker/v1",
+	})
+}
+
+// testBootcContainerInfo returns a BootcContainerInfo DTO for testing with
+// all fields populated to pass generic.NewBootc validation.
+func testBootcContainerInfo() *worker.BootcContainerInfo {
+	// OSInfo is stored as json.RawMessage. The osinfo.Info struct uses
+	// default Go JSON encoding (no json tags on fields), so field names
+	// are PascalCase. OSRelease has no json tags either, so its fields
+	// are also PascalCase.
+	osInfoJSON := json.RawMessage(`{
+		"OSRelease": {
+			"ID": "centos",
+			"VersionID": "9"
+		}
+	}`)
+	return &worker.BootcContainerInfo{
+		Imgref:        "registry.example.com/bootc:latest",
+		ImageID:       "sha256:abc123",
+		Arch:          "x86_64",
+		DefaultRootFs: "ext4",
+		Size:          1024 * 1024 * 1024,
+		OSInfo:        osInfoJSON,
+	}
+}
+
+func TestHandleBootcPreManifestParseError(t *testing.T) {
+	workerServer := newWorkerServer(t)
+
+	// Enqueue a bootc info resolve job and finish it
+	bootcInfoJobID, err := workerServer.EnqueueBootcInfoResolveJob("x86_64", &worker.BootcInfoResolveJob{
+		Ref:         "registry.example.com/bootc:latest",
+		Arch:        "x86_64",
+		FullResolve: true,
+	}, "")
+	require.NoError(t, err)
+	_, infoToken, _, _, _, err := workerServer.RequestJob(
+		context.Background(), "x86_64",
+		[]string{worker.JobTypeBootcInfoResolve}, []string{""}, uuid.Nil,
+	)
+	require.NoError(t, err)
+	infoResultBytes, err := json.Marshal(worker.BootcInfoResolveJobResult{
+		Info: testBootcContainerInfo(),
+	})
+	require.NoError(t, err)
+	require.NoError(t, workerServer.FinishJob(infoToken, infoResultBytes))
+
+	// Enqueue a BootcPreManifest job with the bootc info resolve as dependency
+	preManifestJobID, err := workerServer.EnqueueBootcPreManifestJob(
+		&worker.BootcPreManifestJob{},
+		[]uuid.UUID{bootcInfoJobID}, "",
+	)
+	require.NoError(t, err)
+
+	// Dequeue it
+	_, preManifestToken, _, _, dynArgs, err := workerServer.RequestJobById(
+		context.Background(), "x86_64", preManifestJobID,
+	)
+	require.NoError(t, err)
+
+	// Call handleBootcPreManifest with invalid static args
+	v2.HandleBootcPreManifest(workerServer, preManifestToken, json.RawMessage(`{invalid json`), dynArgs)
+
+	// Read back the result - it should have a parse error
+	var preManifestResult worker.BootcPreManifestJobResult
+	_, err = workerServer.BootcPreManifestJobInfo(preManifestJobID, &preManifestResult)
+	require.NoError(t, err)
+	require.NotNil(t, preManifestResult.JobError)
+	require.Equal(t, clienterrors.ErrorParsingJobArgs, preManifestResult.JobError.ID)
+}
+
+func TestHandleBootcPreManifestDynArgsIdxMissing(t *testing.T) {
+	workerServer := newWorkerServer(t)
+
+	// Enqueue a bootc info resolve job and finish it
+	bootcInfoJobID, err := workerServer.EnqueueBootcInfoResolveJob("x86_64", &worker.BootcInfoResolveJob{
+		Ref:         "registry.example.com/bootc:latest",
+		Arch:        "x86_64",
+		FullResolve: true,
+	}, "")
+	require.NoError(t, err)
+	_, infoToken, _, _, _, err := workerServer.RequestJob(
+		context.Background(), "x86_64",
+		[]string{worker.JobTypeBootcInfoResolve}, []string{""}, uuid.Nil,
+	)
+	require.NoError(t, err)
+	infoResultBytes, err := json.Marshal(worker.BootcInfoResolveJobResult{
+		Info: testBootcContainerInfo(),
+	})
+	require.NoError(t, err)
+	require.NoError(t, workerServer.FinishJob(infoToken, infoResultBytes))
+
+	// Enqueue a BootcPreManifest job with nil BootcBaseResolveDynArgsIdx
+	preManifestJobID, err := workerServer.EnqueueBootcPreManifestJob(
+		&worker.BootcPreManifestJob{
+			ImageType:                  "qcow2",
+			Seed:                       42,
+			BootcBaseResolveDynArgsIdx: nil, // missing!
+		},
+		[]uuid.UUID{bootcInfoJobID}, "",
+	)
+	require.NoError(t, err)
+
+	// Dequeue it
+	_, preManifestToken, _, staticArgs, dynArgs, err := workerServer.RequestJobById(
+		context.Background(), "x86_64", preManifestJobID,
+	)
+	require.NoError(t, err)
+
+	// Call handleBootcPreManifest
+	v2.HandleBootcPreManifest(workerServer, preManifestToken, staticArgs, dynArgs)
+
+	// Read back the result - it should have a dynargs error
+	var preManifestResult worker.BootcPreManifestJobResult
+	_, err = workerServer.BootcPreManifestJobInfo(preManifestJobID, &preManifestResult)
+	require.NoError(t, err)
+	require.NotNil(t, preManifestResult.JobError)
+	require.Equal(t, clienterrors.ErrorParsingDynamicArgs, preManifestResult.JobError.ID)
+}
+
+func TestHandleBootcPreManifestDependencyError(t *testing.T) {
+	workerServer := newWorkerServer(t)
+
+	// Enqueue a bootc info resolve job and finish it with an error
+	bootcInfoJobID, err := workerServer.EnqueueBootcInfoResolveJob("x86_64", &worker.BootcInfoResolveJob{
+		Ref:         "registry.example.com/bootc:latest",
+		Arch:        "x86_64",
+		FullResolve: true,
+	}, "")
+	require.NoError(t, err)
+	_, infoToken, _, _, _, err := workerServer.RequestJob(
+		context.Background(), "x86_64",
+		[]string{worker.JobTypeBootcInfoResolve}, []string{""}, uuid.Nil,
+	)
+	require.NoError(t, err)
+	failedInfoResult := worker.BootcInfoResolveJobResult{
+		JobResult: worker.JobResult{
+			JobError: clienterrors.New(
+				clienterrors.ErrorContainerResolution,
+				"bootc container introspection failed", nil,
+			),
+		},
+	}
+	infoResultBytes, err := json.Marshal(failedInfoResult)
+	require.NoError(t, err)
+	require.NoError(t, workerServer.FinishJob(infoToken, infoResultBytes))
+
+	// Enqueue a BootcPreManifest job depending on the failed resolve
+	baseIdx := 0
+	preManifestJobID, err := workerServer.EnqueueBootcPreManifestJob(
+		&worker.BootcPreManifestJob{
+			ImageType:                  "qcow2",
+			Seed:                       42,
+			BootcBaseResolveDynArgsIdx: &baseIdx,
+		},
+		[]uuid.UUID{bootcInfoJobID}, "",
+	)
+	require.NoError(t, err)
+
+	// Dequeue it
+	_, preManifestToken, _, staticArgs, dynArgs, err := workerServer.RequestJobById(
+		context.Background(), "x86_64", preManifestJobID,
+	)
+	require.NoError(t, err)
+
+	// Call handleBootcPreManifest
+	v2.HandleBootcPreManifest(workerServer, preManifestToken, staticArgs, dynArgs)
+
+	// Read back the result - it should have a dependency error
+	var preManifestResult worker.BootcPreManifestJobResult
+	_, err = workerServer.BootcPreManifestJobInfo(preManifestJobID, &preManifestResult)
+	require.NoError(t, err)
+	require.NotNil(t, preManifestResult.JobError)
+	require.Equal(t, clienterrors.ErrorJobDependency, preManifestResult.JobError.ID)
+}
+
+func TestHandleBootcPreManifestHappyPath(t *testing.T) {
+	workerServer := newWorkerServer(t)
+
+	// Enqueue a bootc info resolve job and finish it with valid info
+	bootcInfoJobID, err := workerServer.EnqueueBootcInfoResolveJob("x86_64", &worker.BootcInfoResolveJob{
+		Ref:         "registry.example.com/bootc:latest",
+		Arch:        "x86_64",
+		FullResolve: true,
+	}, "")
+	require.NoError(t, err)
+	_, infoToken, _, _, _, err := workerServer.RequestJob(
+		context.Background(), "x86_64",
+		[]string{worker.JobTypeBootcInfoResolve}, []string{""}, uuid.Nil,
+	)
+	require.NoError(t, err)
+	infoResultBytes, err := json.Marshal(worker.BootcInfoResolveJobResult{
+		Info: testBootcContainerInfo(),
+	})
+	require.NoError(t, err)
+	require.NoError(t, workerServer.FinishJob(infoToken, infoResultBytes))
+
+	// Enqueue a BootcPreManifest job
+	baseIdx := 0
+	preManifestJobID, err := workerServer.EnqueueBootcPreManifestJob(
+		&worker.BootcPreManifestJob{
+			ImageType:                  "qcow2",
+			Seed:                       42,
+			BootcBaseResolveDynArgsIdx: &baseIdx,
+		},
+		[]uuid.UUID{bootcInfoJobID}, "",
+	)
+	require.NoError(t, err)
+
+	// Dequeue it
+	_, preManifestToken, _, staticArgs, dynArgs, err := workerServer.RequestJobById(
+		context.Background(), "x86_64", preManifestJobID,
+	)
+	require.NoError(t, err)
+
+	// Call handleBootcPreManifest
+	v2.HandleBootcPreManifest(workerServer, preManifestToken, staticArgs, dynArgs)
+
+	// Read back the result - should have no error and container resolve args
+	var preManifestResult worker.BootcPreManifestJobResult
+	_, err = workerServer.BootcPreManifestJobInfo(preManifestJobID, &preManifestResult)
+	require.NoError(t, err)
+	require.Nil(t, preManifestResult.JobError)
+	require.NotNil(t, preManifestResult.ContainerResolveJobArgs)
+	require.NotEmpty(t, preManifestResult.ContainerResolveJobArgs.Specs)
+	require.Equal(t, "x86_64", preManifestResult.ContainerResolveJobArgs.Arch)
+}
+
 func TestComposeBootc(t *testing.T) {
 	srv, _, queue, cancel := newV2Server(t, t.TempDir(), nil)
 	defer cancel()

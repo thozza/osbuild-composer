@@ -585,6 +585,23 @@ func enqueueAndFinishTestJobDependencies(s *worker.Server, deps []testJob) ([]uu
 				return nil, err
 			}
 
+		case *worker.BootcInfoResolveJob:
+			job := dep.main.(*worker.BootcInfoResolveJob)
+			if len(depUUIDs) != 0 {
+				return nil, fmt.Errorf("dependencies are not supported for BootcInfoResolveJob, got: %d", len(depUUIDs))
+			}
+			id, err = s.EnqueueBootcInfoResolveJob(arch.ARCH_X86_64.String(), job, "")
+			if err != nil {
+				return nil, err
+			}
+
+		case *worker.BootcPreManifestJob:
+			job := dep.main.(*worker.BootcPreManifestJob)
+			id, err = s.EnqueueBootcPreManifestJob(job, depUUIDs, "")
+			if err != nil {
+				return nil, err
+			}
+
 		default:
 			return nil, fmt.Errorf("unexpected job type")
 		}
@@ -1326,6 +1343,58 @@ func TestJobDependencyChainErrors(t *testing.T) {
 					},
 				},
 			},
+		},
+		// bootc pre-manifest + bootc info resolve
+		// failed bootc info resolve
+		{
+			job: testJob{
+				main: &worker.BootcPreManifestJob{},
+				deps: []testJob{
+					{
+						main: &worker.BootcInfoResolveJob{},
+						result: &worker.BootcInfoResolveJobResult{
+							JobResult: worker.JobResult{
+								JobError: &clienterrors.Error{
+									ID:     clienterrors.ErrorContainerResolution,
+									Reason: "bootc container introspection failed",
+								},
+							},
+						},
+					},
+				},
+				result: &worker.BootcPreManifestJobResult{
+					JobResult: worker.JobResult{
+						JobError: &clienterrors.Error{
+							ID:     clienterrors.ErrorJobDependency,
+							Reason: "bootc info resolve dependency failed",
+						},
+					},
+				},
+			},
+			expectedError: &clienterrors.Error{
+				ID:     clienterrors.ErrorJobDependency,
+				Reason: "bootc info resolve dependency failed",
+				Details: []*clienterrors.Error{
+					{
+						ID:     clienterrors.ErrorContainerResolution,
+						Reason: "bootc container introspection failed",
+					},
+				},
+			},
+		},
+		// bootc pre-manifest + bootc info resolve — all passed
+		{
+			job: testJob{
+				main: &worker.BootcPreManifestJob{},
+				deps: []testJob{
+					{
+						main:   &worker.BootcInfoResolveJob{},
+						result: &worker.BootcInfoResolveJobResult{},
+					},
+				},
+				result: &worker.BootcPreManifestJobResult{},
+			},
+			expectedError: nil,
 		},
 	}
 

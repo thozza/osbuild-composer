@@ -43,6 +43,7 @@ const (
 	JobTypeImageBuilderManifest string = "image-builder-manifest"
 	JobTypeBootcManifest        string = "bootc-manifest"
 	JobTypeBootcInfoResolve     string = "bootc-info-resolve"
+	JobTypeBootcPreManifest     string = "bootc-pre-manifest"
 )
 
 type Server struct {
@@ -251,6 +252,10 @@ func (s *Server) EnqueueBootcInfoResolveJob(arch string, job *BootcInfoResolveJo
 	return s.enqueue(JobTypeBootcInfoResolve+":"+arch, job, nil, channel)
 }
 
+func (s *Server) EnqueueBootcPreManifestJob(job *BootcPreManifestJob, dependencies []uuid.UUID, channel string) (uuid.UUID, error) {
+	return s.enqueue(JobTypeBootcPreManifest, job, dependencies, channel)
+}
+
 func (s *Server) enqueue(jobType string, job interface{}, dependencies []uuid.UUID, channel string) (uuid.UUID, error) {
 	prometheus.EnqueueJobMetrics(strings.Split(jobType, ":")[0], channel)
 	return s.jobs.Enqueue(jobType, job, dependencies, channel)
@@ -357,6 +362,13 @@ func (s *Server) JobDependencyChainErrors(id uuid.UUID) (*clienterrors.Error, er
 			return nil, err
 		}
 		jobResult = &bootcInfoResolveJR.JobResult
+	case JobTypeBootcPreManifest:
+		var bootcPreManifestJR BootcPreManifestJobResult
+		jobInfo, err = s.BootcPreManifestJobInfo(id, &bootcPreManifestJR)
+		if err != nil {
+			return nil, err
+		}
+		jobResult = &bootcPreManifestJR.JobResult
 
 	default:
 		return nil, fmt.Errorf("unexpected job type: %s", jobType)
@@ -628,6 +640,19 @@ func (s *Server) BootcInfoResolveJobInfo(id uuid.UUID, result *BootcInfoResolveJ
 
 	if jobInfo.JobType != JobTypeBootcInfoResolve {
 		return nil, fmt.Errorf("expected %q, found %q job instead", JobTypeBootcInfoResolve, jobInfo.JobType)
+	}
+
+	return jobInfo, nil
+}
+
+func (s *Server) BootcPreManifestJobInfo(id uuid.UUID, result *BootcPreManifestJobResult) (*JobInfo, error) {
+	jobInfo, err := s.jobInfo(id, result)
+	if err != nil {
+		return nil, err
+	}
+
+	if jobInfo.JobType != JobTypeBootcPreManifest {
+		return nil, fmt.Errorf("expected %q, found %q job instead", JobTypeBootcPreManifest, jobInfo.JobType)
 	}
 
 	return jobInfo, nil
@@ -1056,6 +1081,13 @@ func (s *Server) RequeueOrFinishJob(token uuid.UUID, maxRetries uint64, result j
 			return err
 		}
 		jobResult = &bootcInfoResolveJR.JobResult
+	case JobTypeBootcPreManifest:
+		var bootcPreManifestJR BootcPreManifestJobResult
+		jobInfo, err = s.BootcPreManifestJobInfo(jobId, &bootcPreManifestJR)
+		if err != nil {
+			return err
+		}
+		jobResult = &bootcPreManifestJR.JobResult
 
 	default:
 		return fmt.Errorf("unexpected job type: %s", jobType)
