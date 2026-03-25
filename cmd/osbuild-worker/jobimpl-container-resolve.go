@@ -14,6 +14,17 @@ type ContainerResolveJobImpl struct {
 	AuthFilePath string
 }
 
+// resolveContainerSpecs resolves container specs using the container resolver.
+// Extracted as a variable to allow test injection.
+var resolveContainerSpecs = func(arch, authFilePath string, specs []worker.ContainerSpec) ([]container.Spec, error) {
+	resolver := container.NewResolver(arch)
+	resolver.AuthFilePath = authFilePath
+	for _, s := range specs {
+		resolver.Add(s.ToVendorSourceSpec())
+	}
+	return resolver.Finish()
+}
+
 func (impl *ContainerResolveJobImpl) Run(job worker.Job) error {
 	logWithId := logrus.WithField("jobId", job.Id())
 	var args worker.ContainerResolveJob
@@ -28,14 +39,7 @@ func (impl *ContainerResolveJobImpl) Run(job worker.Job) error {
 
 	logWithId.Infof("Resolving containers (%d)", len(args.Specs))
 
-	resolver := container.NewResolver(args.Arch)
-	resolver.AuthFilePath = impl.AuthFilePath
-
-	for _, s := range args.Specs {
-		resolver.Add(s.ToVendorSourceSpec())
-	}
-
-	specs, err := resolver.Finish()
+	specs, err := resolveContainerSpecs(args.Arch, impl.AuthFilePath, args.Specs)
 
 	if err != nil {
 		result.JobError = clienterrors.New(clienterrors.ErrorContainerResolution, err.Error(), nil)
