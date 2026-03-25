@@ -44,6 +44,11 @@ import (
 // How long to wait for a depsolve job to finish
 const depsolveTimeoutMin = 5
 
+// manifestSourceFunc is a factory function that produces a "manifest source" object.
+// For the standard (package-based) flow it simply returns a pre-built *manifest.Manifest.
+// For bootc it reconstructs the manifest from BootcInfoResolve results.
+type manifestSourceFunc func() (*manifest.Manifest, error)
+
 // serializeManifestFunc is used to serialize the manifest
 // it can be overridden for testing
 var serializeManifestFunc = serializeManifest
@@ -310,10 +315,13 @@ func (s *Server) enqueueCompose(irs []imageRequest, channel string) (uuid.UUID, 
 		return id, HTTPErrorWithInternal(ErrorEnqueueingJob, err)
 	}
 
+	getManifestSource := func() (*manifest.Manifest, error) {
+		return manifestSource, nil
+	}
 	s.goroutinesGroup.Add(1)
 	go func() {
-		serializeManifestFunc(s.goroutinesCtx, manifestSource, s.workers, dependencies, manifestJobID, ir.manifestSeed)
 		defer s.goroutinesGroup.Done()
+		serializeManifestFunc(s.goroutinesCtx, getManifestSource, s.workers, dependencies, manifestJobID, ir.manifestSeed)
 	}()
 
 	return id, nil
@@ -447,10 +455,13 @@ func (s *Server) enqueueKojiCompose(taskID uint64, server, name, version, releas
 		buildIDs = append(buildIDs, buildID)
 
 		// copy the image request while passing it into the goroutine to prevent data races
+		getManifestSource := func() (*manifest.Manifest, error) {
+			return manifestSource, nil
+		}
 		s.goroutinesGroup.Add(1)
 		go func(ir imageRequest) {
-			serializeManifestFunc(s.goroutinesCtx, manifestSource, s.workers, dependencies, manifestJobID, ir.manifestSeed)
 			defer s.goroutinesGroup.Done()
+			serializeManifestFunc(s.goroutinesCtx, getManifestSource, s.workers, dependencies, manifestJobID, ir.manifestSeed)
 		}(ir)
 	}
 	id, err = s.workers.EnqueueKojiFinalize(&worker.KojiFinalizeJob{
@@ -527,7 +538,7 @@ func (s *Server) enqueueBootcCompose(request ComposeRequest, channel string) (uu
 	return id, nil
 }
 
-func serializeManifest(ctx context.Context, manifestSource *manifest.Manifest, workers *worker.Server, dependencies manifestJobDependencies, manifestJobID uuid.UUID, seed int64) {
+func serializeManifest(ctx context.Context, getManifestSource manifestSourceFunc, workers *worker.Server, dependencies manifestJobDependencies, manifestJobID uuid.UUID, seed int64) {
 	// prepared to become a config variable
 	ctx, cancel := context.WithTimeout(ctx, time.Minute*depsolveTimeoutMin)
 	defer cancel()
@@ -606,6 +617,16 @@ func serializeManifest(ctx context.Context, manifestSource *manifest.Manifest, w
 			return
 		}
 		break
+	}
+
+	// Obtain the manifest source via the factory function.
+	// For the standard flow this simply returns the pre-built manifest.
+	// For bootc this reconstructs it from BootcInfoResolve results.
+	manifestSource, err := getManifestSource()
+	if err != nil {
+		reason := "Error obtaining manifest source"
+		jobResult.JobError = clienterrors.New(clienterrors.ErrorManifestGeneration, reason, err.Error())
+		return
 	}
 
 	// add osbuild/images dependency info to job result
