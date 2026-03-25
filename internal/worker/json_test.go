@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/osbuild/images/pkg/container"
 	"github.com/osbuild/images/pkg/depsolvednf"
 	"github.com/osbuild/images/pkg/rpmmd"
 	"github.com/osbuild/images/pkg/sbom"
@@ -1415,4 +1416,214 @@ func TestDepsolvedModuleSpecRPMMDConversion(t *testing.T) {
 			assert.EqualValues(t, tc.module, result)
 		})
 	}
+}
+
+func TestContainerSpecFromVendorSourceSpec(t *testing.T) {
+	testCases := []struct {
+		name     string
+		source   container.SourceSpec
+		expected ContainerSpec
+	}{
+		{
+			name: "all fields with local true",
+			source: container.SourceSpec{
+				Source:    "registry.example.com/image:latest",
+				Name:      "my-image",
+				TLSVerify: common.ToPtr(true),
+				Local:     true,
+			},
+			expected: ContainerSpec{
+				Source:    "registry.example.com/image:latest",
+				Name:      "my-image",
+				TLSVerify: common.ToPtr(true),
+				Local:     true,
+			},
+		},
+		{
+			name: "local false with nil TLSVerify",
+			source: container.SourceSpec{
+				Source: "quay.io/centos-bootc/centos-bootc:stream9",
+				Name:   "centos-bootc",
+			},
+			expected: ContainerSpec{
+				Source: "quay.io/centos-bootc/centos-bootc:stream9",
+				Name:   "centos-bootc",
+			},
+		},
+		{
+			name:     "minimal",
+			source:   container.SourceSpec{Source: "example.com/img"},
+			expected: ContainerSpec{Source: "example.com/img"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := ContainerSpecFromVendorSourceSpec(tc.source)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestContainerSpecToVendorSourceSpec(t *testing.T) {
+	testCases := []struct {
+		name     string
+		spec     ContainerSpec
+		expected container.SourceSpec
+	}{
+		{
+			name: "all fields with local true",
+			spec: ContainerSpec{
+				Source:    "registry.example.com/image:latest",
+				Name:      "my-image",
+				TLSVerify: common.ToPtr(false),
+				Local:     true,
+			},
+			expected: container.SourceSpec{
+				Source:    "registry.example.com/image:latest",
+				Name:      "my-image",
+				TLSVerify: common.ToPtr(false),
+				Local:     true,
+			},
+		},
+		{
+			name:     "minimal",
+			spec:     ContainerSpec{Source: "example.com/img"},
+			expected: container.SourceSpec{Source: "example.com/img"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.spec.ToVendorSourceSpec()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestContainerSpecFromVendorSpec(t *testing.T) {
+	testCases := []struct {
+		name     string
+		spec     container.Spec
+		expected ContainerSpec
+	}{
+		{
+			name: "all fields with local storage",
+			spec: container.Spec{
+				Source:       "registry.example.com/image:latest",
+				LocalName:    "my-image",
+				TLSVerify:    common.ToPtr(true),
+				LocalStorage: true,
+				ImageID:      "sha256:abc123",
+				Digest:       "sha256:def456",
+				ListDigest:   "sha256:ghi789",
+			},
+			expected: ContainerSpec{
+				Source:     "registry.example.com/image:latest",
+				Name:       "my-image",
+				TLSVerify:  common.ToPtr(true),
+				Local:      true,
+				ImageID:    "sha256:abc123",
+				Digest:     "sha256:def456",
+				ListDigest: "sha256:ghi789",
+			},
+		},
+		{
+			name: "remote storage",
+			spec: container.Spec{
+				Source:  "quay.io/image",
+				Digest:  "sha256:abc",
+				ImageID: "sha256:def",
+			},
+			expected: ContainerSpec{
+				Source:  "quay.io/image",
+				Digest:  "sha256:abc",
+				ImageID: "sha256:def",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := ContainerSpecFromVendorSpec(tc.spec)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestContainerSpecToVendorSpec(t *testing.T) {
+	testCases := []struct {
+		name     string
+		spec     ContainerSpec
+		expected container.Spec
+	}{
+		{
+			name: "all fields with local",
+			spec: ContainerSpec{
+				Source:     "registry.example.com/image:latest",
+				Name:       "my-image",
+				TLSVerify:  common.ToPtr(true),
+				Local:      true,
+				ImageID:    "sha256:abc123",
+				Digest:     "sha256:def456",
+				ListDigest: "sha256:ghi789",
+			},
+			expected: container.Spec{
+				Source:       "registry.example.com/image:latest",
+				LocalName:    "my-image",
+				TLSVerify:    common.ToPtr(true),
+				LocalStorage: true,
+				ImageID:      "sha256:abc123",
+				Digest:       "sha256:def456",
+				ListDigest:   "sha256:ghi789",
+			},
+		},
+		{
+			name: "minimal",
+			spec: ContainerSpec{
+				Source: "quay.io/image",
+				Digest: "sha256:abc",
+			},
+			expected: container.Spec{
+				Source: "quay.io/image",
+				Digest: "sha256:abc",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.spec.ToVendorSpec()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestContainerSpecVendorSourceSpecRoundtrip(t *testing.T) {
+	original := container.SourceSpec{
+		Source:    "registry.example.com/image:latest",
+		Name:      "my-image",
+		TLSVerify: common.ToPtr(true),
+		Local:     true,
+	}
+
+	cs := ContainerSpecFromVendorSourceSpec(original)
+	result := cs.ToVendorSourceSpec()
+	assert.Equal(t, original, result)
+}
+
+func TestContainerSpecVendorSpecRoundtrip(t *testing.T) {
+	original := container.Spec{
+		Source:       "registry.example.com/image:latest",
+		LocalName:    "my-image",
+		TLSVerify:    common.ToPtr(true),
+		LocalStorage: true,
+		ImageID:      "sha256:abc123",
+		Digest:       "sha256:def456",
+		ListDigest:   "sha256:ghi789",
+	}
+
+	cs := ContainerSpecFromVendorSpec(original)
+	result := cs.ToVendorSpec()
+	assert.Equal(t, original, result)
 }
