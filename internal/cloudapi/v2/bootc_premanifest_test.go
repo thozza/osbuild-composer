@@ -198,7 +198,7 @@ func TestHandleBootcPreManifest_Errors(t *testing.T) {
 				return []json.RawMessage{rawValidBaseBootcInfoResult(t)}
 			},
 			wantErrID:          clienterrors.ErrorManifestGeneration,
-			wantReasonContains: "invalid image type: nonexistent-image-type",
+			wantReasonContains: "Error generating bootc pre-manifest: getting image type \"nonexistent-image-type\": invalid image type: nonexistent-image-type",
 		},
 	}
 
