@@ -11,6 +11,7 @@ var (
 	MakeJobErrorFromOsbuildOutput = makeJobErrorFromOsbuildOutput
 	Main                          = main
 	ParseManifestPipelines        = parseManifestPipelines
+	ResolvePipelineNames          = resolvePipelineNames
 )
 
 func MockRun(new func()) (restore func()) {

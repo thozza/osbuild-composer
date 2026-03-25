@@ -84,6 +84,15 @@ type ExecutorConfiguration struct {
 	KeyName    string
 }
 
+// resolvePipelineNames returns the PipelineNames from job args if set,
+// otherwise falls back to PipelineNames from the manifest info.
+func resolvePipelineNames(fromArgs *worker.PipelineNames, fromManifestInfo *worker.PipelineNames) *worker.PipelineNames {
+	if fromArgs != nil {
+		return fromArgs
+	}
+	return fromManifestInfo
+}
+
 type OSBuildJobImpl struct {
 	Store                string
 	Output               string
@@ -462,14 +471,7 @@ func (impl *OSBuildJobImpl) Run(job worker.Job) error {
 	}
 
 	// copy pipeline info to the result
-	osbuildJobResult.PipelineNames = jobArgs.PipelineNames
-	if osbuildJobResult.PipelineNames == nil {
-		// jobArgs doesn't provide the pipeline names when the manifest was
-		// generated using image-builder-cli. In this case, the manifest job
-		// result itself should have the pipeline names (under ManifestInfo)
-		// parsed from the manifest itself.
-		osbuildJobResult.PipelineNames = manifestInfo.PipelineNames
-	}
+	osbuildJobResult.PipelineNames = resolvePipelineNames(jobArgs.PipelineNames, manifestInfo.PipelineNames)
 
 	// copy the image boot mode to the result
 	osbuildJobResult.ImageBootMode = jobArgs.ImageBootMode

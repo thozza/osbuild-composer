@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/osbuild/images/pkg/osbuild"
 
 	main "github.com/osbuild/osbuild-composer/cmd/osbuild-worker"
+	"github.com/osbuild/osbuild-composer/internal/worker"
 )
 
 func TestMakeJobErrorFromOsbuildOutput(t *testing.T) {
@@ -76,5 +78,49 @@ func TestMakeJobErrorFromOsbuildOutput(t *testing.T) {
 
 		wce := main.MakeJobErrorFromOsbuildOutput(fakeOsbuildResult)
 		require.Equal(t, testData.expected, wce.String())
+	}
+}
+
+func TestResolvePipelineNames(t *testing.T) {
+	argsPipelines := &worker.PipelineNames{
+		Build:   []string{"build"},
+		Payload: []string{"os", "image"},
+	}
+	manifestInfoPipelines := &worker.PipelineNames{
+		Build:   []string{"manifest-build"},
+		Payload: []string{"manifest-os"},
+	}
+
+	tests := []struct {
+		name     string
+		fromArgs *worker.PipelineNames
+		fromInfo *worker.PipelineNames
+		expected *worker.PipelineNames
+	}{
+		{
+			name:     "args has PipelineNames",
+			fromArgs: argsPipelines,
+			fromInfo: manifestInfoPipelines,
+			expected: argsPipelines,
+		},
+		{
+			name:     "args nil, fallback to manifest info",
+			fromArgs: nil,
+			fromInfo: manifestInfoPipelines,
+			expected: manifestInfoPipelines,
+		},
+		{
+			name:     "both nil",
+			fromArgs: nil,
+			fromInfo: nil,
+			expected: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := main.ResolvePipelineNames(tc.fromArgs, tc.fromInfo)
+			assert.Equal(t, tc.expected, result)
+		})
 	}
 }
