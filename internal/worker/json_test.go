@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/osbuild/images/pkg/bib/osinfo"
+	"github.com/osbuild/images/pkg/bootc"
 	"github.com/osbuild/images/pkg/container"
 	"github.com/osbuild/images/pkg/depsolvednf"
 	"github.com/osbuild/images/pkg/rpmmd"
@@ -1625,5 +1627,166 @@ func TestContainerSpecVendorSpecRoundtrip(t *testing.T) {
 
 	cs := ContainerSpecFromVendorSpec(original)
 	result := cs.ToVendorSpec()
+	assert.Equal(t, original, result)
+}
+
+func TestBootcContainerInfoFromVendor(t *testing.T) {
+	testCases := []struct {
+		name      string
+		info      *bootc.Info
+		expectNil bool
+	}{
+		{
+			name:      "nil input",
+			info:      nil,
+			expectNil: true,
+		},
+		{
+			name: "full resolve with OSInfo",
+			info: &bootc.Info{
+				Imgref:        "quay.io/centos-bootc/centos-bootc:stream9",
+				ImageID:       "sha256:abc123",
+				Arch:          "x86_64",
+				DefaultRootFs: "xfs",
+				Size:          1024000,
+				OSInfo: &osinfo.Info{
+					UEFIVendor:    "centos",
+					SELinuxPolicy: "targeted",
+				},
+			},
+		},
+		{
+			name: "minimal resolve without OSInfo",
+			info: &bootc.Info{
+				Imgref:  "quay.io/centos-bootc/centos-bootc:stream9",
+				ImageID: "sha256:abc123",
+				Arch:    "x86_64",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dto, err := BootcContainerInfoFromVendor(tc.info)
+			require.NoError(t, err)
+			if tc.expectNil {
+				assert.Nil(t, dto)
+				return
+			}
+			require.NotNil(t, dto)
+			assert.Equal(t, tc.info.Imgref, dto.Imgref)
+			assert.Equal(t, tc.info.ImageID, dto.ImageID)
+			assert.Equal(t, tc.info.Arch, dto.Arch)
+			assert.Equal(t, tc.info.DefaultRootFs, dto.DefaultRootFs)
+			assert.Equal(t, tc.info.Size, dto.Size)
+			if tc.info.OSInfo != nil {
+				assert.NotEmpty(t, dto.OSInfo)
+			} else {
+				assert.Empty(t, dto.OSInfo)
+			}
+		})
+	}
+}
+
+func TestBootcContainerInfoToVendor(t *testing.T) {
+	testCases := []struct {
+		name      string
+		dto       *BootcContainerInfo
+		expectNil bool
+	}{
+		{
+			name:      "nil input",
+			dto:       nil,
+			expectNil: true,
+		},
+		{
+			name: "full resolve with OSInfo",
+			dto: &BootcContainerInfo{
+				Imgref:        "quay.io/centos-bootc/centos-bootc:stream9",
+				ImageID:       "sha256:abc123",
+				Arch:          "x86_64",
+				DefaultRootFs: "xfs",
+				Size:          1024000,
+				OSInfo:        json.RawMessage(`{"uefi_vendor":"centos","selinux_policy":"targeted"}`),
+			},
+		},
+		{
+			name: "minimal without OSInfo",
+			dto: &BootcContainerInfo{
+				Imgref:  "quay.io/centos-bootc/centos-bootc:stream9",
+				ImageID: "sha256:abc123",
+				Arch:    "x86_64",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			info, err := tc.dto.ToVendor()
+			require.NoError(t, err)
+			if tc.expectNil {
+				assert.Nil(t, info)
+				return
+			}
+			require.NotNil(t, info)
+			assert.Equal(t, tc.dto.Imgref, info.Imgref)
+			assert.Equal(t, tc.dto.ImageID, info.ImageID)
+			assert.Equal(t, tc.dto.Arch, info.Arch)
+			assert.Equal(t, tc.dto.DefaultRootFs, info.DefaultRootFs)
+			assert.Equal(t, tc.dto.Size, info.Size)
+			if len(tc.dto.OSInfo) > 0 {
+				assert.NotNil(t, info.OSInfo)
+			} else {
+				assert.Nil(t, info.OSInfo)
+			}
+		})
+	}
+}
+
+func TestBootcContainerInfoRoundtrip(t *testing.T) {
+	original := &bootc.Info{
+		Imgref:        "quay.io/centos-bootc/centos-bootc:stream9",
+		ImageID:       "sha256:abc123",
+		Arch:          "x86_64",
+		DefaultRootFs: "xfs",
+		Size:          1024000,
+		OSInfo: &osinfo.Info{
+			UEFIVendor:    "centos",
+			SELinuxPolicy: "targeted",
+		},
+	}
+
+	dto, err := BootcContainerInfoFromVendor(original)
+	require.NoError(t, err)
+
+	roundtripped, err := dto.ToVendor()
+	require.NoError(t, err)
+
+	assert.Equal(t, original.Imgref, roundtripped.Imgref)
+	assert.Equal(t, original.ImageID, roundtripped.ImageID)
+	assert.Equal(t, original.Arch, roundtripped.Arch)
+	assert.Equal(t, original.DefaultRootFs, roundtripped.DefaultRootFs)
+	assert.Equal(t, original.Size, roundtripped.Size)
+	assert.Equal(t, original.OSInfo.UEFIVendor, roundtripped.OSInfo.UEFIVendor)
+	assert.Equal(t, original.OSInfo.SELinuxPolicy, roundtripped.OSInfo.SELinuxPolicy)
+}
+
+func TestBootcContainerInfoJSONRoundtrip(t *testing.T) {
+	original := BootcContainerInfo{
+		Imgref:        "quay.io/centos-bootc/centos-bootc:stream9",
+		ImageID:       "sha256:abc123",
+		Arch:          "x86_64",
+		DefaultRootFs: "xfs",
+		Size:          1024000,
+		OSInfo:        json.RawMessage(`{"uefi_vendor":"centos"}`),
+	}
+
+	data, err := json.Marshal(original)
+	require.NoError(t, err)
+
+	var result BootcContainerInfo
+	err = json.Unmarshal(data, &result)
+	require.NoError(t, err)
+
 	assert.Equal(t, original, result)
 }

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/osbuild/blueprint/pkg/blueprint"
+	"github.com/osbuild/images/pkg/bib/osinfo"
+	"github.com/osbuild/images/pkg/bootc"
 	"github.com/osbuild/images/pkg/container"
 	"github.com/osbuild/images/pkg/depsolvednf"
 	"github.com/osbuild/images/pkg/manifest"
@@ -1078,3 +1080,75 @@ type ImageBuilderManifestJob struct {
 
 // ImageBuilderManifestJobResult is an alias to [ManifestJobByIDResult].
 type ImageBuilderManifestJobResult = ManifestJobByIDResult
+
+// BootcInfoResolveJob resolves bootc container metadata by running
+// and inspecting the container. Each job handles a single container.
+type BootcInfoResolveJob struct {
+	Ref  string `json:"reference"`
+	Arch string `json:"arch"`
+	// FullResolve controls whether to perform full info resolution
+	// (ResolveInfo — base container) or minimal resolution
+	// (ResolveBuildInfo — build container).
+	FullResolve bool `json:"full_resolve"`
+}
+
+// BootcContainerInfo is a DTO for bootc container metadata, decoupled
+// from the vendored bootc.Info type. OSInfo is kept as json.RawMessage
+// for simplicity — it can be expanded with more granular fields later.
+type BootcContainerInfo struct {
+	Imgref        string          `json:"imgref"`
+	ImageID       string          `json:"image_id"`
+	Arch          string          `json:"arch"`
+	DefaultRootFs string          `json:"default_root_fs,omitempty"`
+	Size          uint64          `json:"size,omitempty"`
+	OSInfo        json.RawMessage `json:"os_info,omitempty"`
+}
+
+// BootcContainerInfoFromVendor converts a vendored bootc.Info to the DTO.
+func BootcContainerInfoFromVendor(info *bootc.Info) (*BootcContainerInfo, error) {
+	if info == nil {
+		return nil, nil
+	}
+	result := &BootcContainerInfo{
+		Imgref:        info.Imgref,
+		ImageID:       info.ImageID,
+		Arch:          info.Arch,
+		DefaultRootFs: info.DefaultRootFs,
+		Size:          info.Size,
+	}
+	if info.OSInfo != nil {
+		osInfoJSON, err := json.Marshal(info.OSInfo)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling OSInfo: %w", err)
+		}
+		result.OSInfo = osInfoJSON
+	}
+	return result, nil
+}
+
+// ToVendor converts the DTO back to the vendored bootc.Info type.
+func (b *BootcContainerInfo) ToVendor() (*bootc.Info, error) {
+	if b == nil {
+		return nil, nil
+	}
+	result := &bootc.Info{
+		Imgref:        b.Imgref,
+		ImageID:       b.ImageID,
+		Arch:          b.Arch,
+		DefaultRootFs: b.DefaultRootFs,
+		Size:          b.Size,
+	}
+	if len(b.OSInfo) > 0 {
+		var osInfoValue osinfo.Info
+		if err := json.Unmarshal(b.OSInfo, &osInfoValue); err != nil {
+			return nil, fmt.Errorf("unmarshalling OSInfo: %w", err)
+		}
+		result.OSInfo = &osInfoValue
+	}
+	return result, nil
+}
+
+type BootcInfoResolveJobResult struct {
+	Info *BootcContainerInfo `json:"info"`
+	JobResult
+}

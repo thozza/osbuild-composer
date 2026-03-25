@@ -1535,3 +1535,94 @@ func TestCleanupArtifacts(t *testing.T) {
 	assert.False(t, artifactUUIDExists(tempdir, lostJobID))
 	assert.False(t, artifactUUIDExists(tempdir, emptyJobID))
 }
+
+func TestBootcInfoResolveJobArchRouting(t *testing.T) {
+	server := newTestServer(t, t.TempDir(), defaultConfig, false)
+
+	bootcInfoJob := worker.BootcInfoResolveJob{
+		Ref:         "registry.example.com/bootc:latest",
+		Arch:        arch.ARCH_X86_64.String(),
+		FullResolve: true,
+	}
+
+	jobID, err := server.EnqueueBootcInfoResolveJob(arch.ARCH_X86_64.String(), &bootcInfoJob, "")
+	require.NoError(t, err)
+	require.NotEqual(t, uuid.Nil, jobID)
+
+	// RequestJob with a mismatching arch should time out (no job available)
+	shortTimeoutConfig := worker.Config{
+		RequestJobTimeout: time.Millisecond * 10,
+		BasePath:          "/api/worker/v1",
+	}
+	mismatchServer := newTestServer(t, t.TempDir(), shortTimeoutConfig, false)
+	mismatchJobID, err := mismatchServer.EnqueueBootcInfoResolveJob(arch.ARCH_X86_64.String(), &bootcInfoJob, "")
+	require.NoError(t, err)
+	require.NotEqual(t, uuid.Nil, mismatchJobID)
+
+	_, _, _, _, _, err = mismatchServer.RequestJob(
+		context.Background(), arch.ARCH_AARCH64.String(),
+		[]string{worker.JobTypeBootcInfoResolve}, []string{""}, uuid.Nil,
+	)
+	require.Equal(t, jobqueue.ErrDequeueTimeout, err)
+
+	// RequestJob with the matching arch should succeed
+	dequeuedJobID, _, dequeuedJobType, dequeuedArgs, _, err := server.RequestJob(
+		context.Background(), arch.ARCH_X86_64.String(),
+		[]string{worker.JobTypeBootcInfoResolve}, []string{""}, uuid.Nil,
+	)
+	require.NoError(t, err)
+	require.Equal(t, jobID, dequeuedJobID)
+	require.Equal(t, worker.JobTypeBootcInfoResolve, dequeuedJobType)
+	require.NotNil(t, dequeuedArgs)
+}
+
+func TestBootcInfoResolveJobInfo(t *testing.T) {
+	server := newTestServer(t, t.TempDir(), defaultConfig, false)
+
+	bootcInfoJob := worker.BootcInfoResolveJob{
+		Ref:         "registry.example.com/bootc:latest",
+		Arch:        arch.ARCH_X86_64.String(),
+		FullResolve: true,
+	}
+
+	jobID, err := server.EnqueueBootcInfoResolveJob(arch.ARCH_X86_64.String(), &bootcInfoJob, "")
+	require.NoError(t, err)
+
+	// Dequeue (request) the job
+	_, token, _, _, _, err := server.RequestJob(
+		context.Background(), arch.ARCH_X86_64.String(),
+		[]string{worker.JobTypeBootcInfoResolve}, []string{""}, uuid.Nil,
+	)
+	require.NoError(t, err)
+
+	// Finish the job with a result
+	expectedInfo := &worker.BootcContainerInfo{
+		Imgref:        "registry.example.com/bootc@sha256:abc123",
+		ImageID:       "sha256:abc123",
+		Arch:          arch.ARCH_X86_64.String(),
+		DefaultRootFs: "ext4",
+		Size:          1024 * 1024 * 1024,
+	}
+	finishResult := worker.BootcInfoResolveJobResult{
+		Info: expectedInfo,
+	}
+	resultBytes, err := json.Marshal(finishResult)
+	require.NoError(t, err)
+	err = server.FinishJob(token, resultBytes)
+	require.NoError(t, err)
+
+	// Read back via BootcInfoResolveJobInfo
+	var readBackResult worker.BootcInfoResolveJobResult
+	jobInfo, err := server.BootcInfoResolveJobInfo(jobID, &readBackResult)
+	require.NoError(t, err)
+	require.NotNil(t, jobInfo)
+	require.False(t, jobInfo.JobStatus.Finished.IsZero())
+
+	require.NotNil(t, readBackResult.Info)
+	require.Equal(t, expectedInfo.Imgref, readBackResult.Info.Imgref)
+	require.Equal(t, expectedInfo.ImageID, readBackResult.Info.ImageID)
+	require.Equal(t, expectedInfo.Arch, readBackResult.Info.Arch)
+	require.Equal(t, expectedInfo.DefaultRootFs, readBackResult.Info.DefaultRootFs)
+	require.Equal(t, expectedInfo.Size, readBackResult.Info.Size)
+	require.Nil(t, readBackResult.JobError)
+}
