@@ -10,6 +10,7 @@ import (
 
 	main "github.com/osbuild/osbuild-composer/cmd/osbuild-worker"
 	"github.com/osbuild/osbuild-composer/internal/worker"
+	"github.com/osbuild/osbuild-composer/internal/worker/clienterrors"
 )
 
 func unmarshalResolveResult(t *testing.T, raw json.RawMessage) worker.ContainerResolveJobResult {
@@ -58,17 +59,16 @@ func TestContainerResolveJobRun(t *testing.T) {
 			name:             "args unmarshal error",
 			jobArgsRaw:       json.RawMessage(`{invalid json`),
 			wantRunErr:       true,
-			wantFinishCalled: false,
+			wantFinishCalled: true,
 		},
 		{
-			name: "finish returns error",
+			name: "finish error is logged not returned",
 			jobArgs: &worker.ContainerResolveJob{
 				Arch:  "x86_64",
 				Specs: []worker.ContainerSpec{},
 			},
 			finishErr:        fmt.Errorf("connection lost"),
-			wantRunErr:       true,
-			wantErrSubstr:    "Error reporting job result",
+			wantRunErr:       false,
 			wantFinishCalled: true,
 		},
 		{
@@ -82,10 +82,13 @@ func TestContainerResolveJobRun(t *testing.T) {
 					},
 				},
 			},
+			wantRunErr:       true,
+			wantErrSubstr:    "Error resolving containers",
 			wantFinishCalled: true,
 			verifyFinishResult: func(t *testing.T, raw json.RawMessage) {
 				r := unmarshalResolveResult(t, raw)
 				assert.NotNil(t, r.JobError, "expected job error for unresolvable container")
+				assert.Equal(t, clienterrors.ErrorContainerResolution, r.JobError.ID)
 			},
 		},
 	}
