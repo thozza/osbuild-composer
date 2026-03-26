@@ -987,6 +987,9 @@ func (cs *ContainerSpec) ToVendorSpec() container.Spec {
 type ContainerResolveJob struct {
 	Arch  string          `json:"arch"`
 	Specs []ContainerSpec `json:"specs"`
+	// Index of the BootcPreManifestJobResult in dynamic args, from which
+	// to read resolve args when Specs is empty.
+	PreManifestDynArgsIdx *int `json:"pre_manifest_dyn_args_idx,omitempty"`
 }
 
 type ContainerResolveJobResult struct {
