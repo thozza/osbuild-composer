@@ -568,10 +568,7 @@ func enqueueAndFinishTestJobDependencies(s *worker.Server, deps []testJob) ([]uu
 
 		case *worker.ContainerResolveJob:
 			job := dep.main.(*worker.ContainerResolveJob)
-			if len(depUUIDs) != 0 {
-				return nil, fmt.Errorf("dependencies are not supported for ContainerResolveJob, got: %d", len(depUUIDs))
-			}
-			id, err = s.EnqueueContainerResolveJob(job, "")
+			id, err = s.EnqueueContainerResolveJob(job, depUUIDs, "")
 			if err != nil {
 				return nil, err
 			}
@@ -1689,8 +1686,10 @@ func TestBootcPreManifestJobInfo(t *testing.T) {
 	expectedResult := worker.BootcPreManifestJobResult{
 		ContainerResolveJobArgs: &worker.ContainerResolveJob{
 			Arch: "x86_64",
-			Specs: []worker.ContainerSpec{
-				{Source: "quay.io/test:latest", Name: "quay.io/test:latest"},
+			PipelineSpecs: map[string][]worker.ContainerSpec{
+				"os": {
+					{Source: "quay.io/test:latest", Name: "quay.io/test:latest"},
+				},
 			},
 		},
 	}

@@ -238,7 +238,7 @@ func (s *Server) enqueueResolveJobs(manifestSource *manifest.Manifest, it distro
 			PipelineSpecs: pipelineSpecs,
 		}
 
-		containerResolveJobID, err := s.workers.EnqueueContainerResolveJob(&job, channel)
+		containerResolveJobID, err := s.workers.EnqueueContainerResolveJob(&job, nil, channel)
 		if err != nil {
 			return jobDependencies, HTTPErrorWithInternal(ErrorEnqueueingJob, err)
 		}
@@ -1001,14 +1001,16 @@ func handleBootcPreManifest(
 		return
 	}
 
-	var allSpecs []worker.ContainerSpec
-	for _, pipelineSources := range containerSources {
-		for _, source := range pipelineSources {
-			allSpecs = append(allSpecs, worker.ContainerSpecFromVendorSourceSpec(source))
+	pipelineSpecs := make(map[string][]worker.ContainerSpec, len(containerSources))
+	for name, sources := range containerSources {
+		specs := make([]worker.ContainerSpec, len(sources))
+		for idx, source := range sources {
+			specs[idx] = worker.ContainerSpecFromVendorSourceSpec(source)
 		}
+		pipelineSpecs[name] = specs
 	}
 	preManifestResult.ContainerResolveJobArgs = &worker.ContainerResolveJob{
-		Arch:  canonicalArch.String(),
-		Specs: allSpecs,
+		Arch:          canonicalArch.String(),
+		PipelineSpecs: pipelineSpecs,
 	}
 }

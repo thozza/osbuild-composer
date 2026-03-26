@@ -285,16 +285,14 @@ func assertValidPreManifestResult(t *testing.T, result worker.BootcPreManifestJo
 	require.Nil(t, result.JobError, "expected no job error, got: %v", result.JobError)
 
 	assert.Equal(t, "x86_64", result.ContainerResolveJobArgs.Arch)
-	assert.NotEmpty(t, result.ContainerResolveJobArgs.Specs, "expected at least one container spec")
+	assert.NotEmpty(t, result.ContainerResolveJobArgs.PipelineSpecs, "expected at least one container spec")
 
-	foundBaseRef := false
-	for _, spec := range result.ContainerResolveJobArgs.Specs {
-		if spec.Source == "quay.io/centos-bootc/centos-bootc:stream9" {
-			foundBaseRef = true
-			break
-		}
+	// the ContainerResolveJob args should have two pipelines: "build" and "image", each with the same source spec
+	assert.Equal(t, 2, len(result.ContainerResolveJobArgs.PipelineSpecs))
+	for _, pipeline := range []string{"build", "image"} {
+		assert.Equal(t, 1, len(result.ContainerResolveJobArgs.PipelineSpecs[pipeline]))
+		assert.Equal(t, "quay.io/centos-bootc/centos-bootc:stream9", result.ContainerResolveJobArgs.PipelineSpecs[pipeline][0].Source)
 	}
-	assert.True(t, foundBaseRef, "expected container spec with source quay.io/centos-bootc/centos-bootc:stream9")
 }
 
 // TestHandleBootcPreManifest_HappyPath tests the happy path for the
