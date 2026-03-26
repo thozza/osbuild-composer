@@ -37,6 +37,18 @@ func (impl *ContainerResolveJobImpl) Run(job worker.Job) error {
 		return fmt.Errorf("Error parsing container resolve job args: %v", err)
 	}
 
+	// If static args have no specs and a dynArgs index is set, read args from the BootcPreManifest dependency result.
+	if len(args.Specs) == 0 && args.PreManifestDynArgsIdx != nil {
+		dynArgsResult, dynArgsErr := readContainerResolveArgsFromDynArgs(job, *args.PreManifestDynArgsIdx)
+		if dynArgsErr != nil {
+			result.JobError = dynArgsErr
+			return fmt.Errorf("Error reading container resolve args from dynamic args: %v", dynArgsErr)
+		}
+		if dynArgsResult != nil {
+			args = *dynArgsResult
+		}
+	}
+
 	// No-op: no specs to resolve
 	if len(args.Specs) == 0 {
 		return nil
@@ -65,4 +77,35 @@ func (impl *ContainerResolveJobImpl) Run(job worker.Job) error {
 	}
 
 	return nil
+}
+
+// readContainerResolveArgsFromDynArgs reads the container resolve args from
+// a BootcPreManifestJobResult stored in dynamic args at the given index.
+func readContainerResolveArgsFromDynArgs(job worker.Job, dynArgsIdx int) (*worker.ContainerResolveJob, *clienterrors.Error) {
+	if dynArgsIdx >= job.NDynamicArgs() {
+		return nil, clienterrors.New(
+			clienterrors.ErrorParsingDynamicArgs,
+			"PreManifestDynArgsIdx is out of range",
+			nil,
+		)
+	}
+
+	var preManifestResult worker.BootcPreManifestJobResult
+	if err := job.DynamicArgs(dynArgsIdx, &preManifestResult); err != nil {
+		return nil, clienterrors.New(
+			clienterrors.ErrorParsingDynamicArgs,
+			"Error parsing BootcPreManifestJobResult from dynamic args: "+err.Error(),
+			nil,
+		)
+	}
+
+	if preManifestResult.JobError != nil {
+		return nil, clienterrors.New(
+			clienterrors.ErrorJobDependency,
+			"BootcPreManifest dependency failed",
+			preManifestResult.JobError.Reason,
+		)
+	}
+
+	return preManifestResult.ContainerResolveJobArgs, nil
 }
