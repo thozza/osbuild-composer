@@ -965,11 +965,8 @@ func (s *Server) bootcPreManifestLoop() {
 	sem := make(chan struct{}, maxConcurentPreManifestJobs)
 
 	for {
-		// Pass empty channel for on-prem (no tenant).
-		// TODO: Multi-tenant deployments with JWT-based channels will need this
-		// updated to enumerate tenant channels or use a different mechanism.
-		jobID, token, _, staticArgs, dynArgs, err := s.workers.RequestJob(
-			s.goroutinesCtx, "", []string{worker.JobTypeBootcPreManifest}, []string{""}, uuid.Nil,
+		jobID, token, _, staticArgs, dynArgs, err := s.workers.RequestJobAnyChannel(
+			s.goroutinesCtx, "", []string{worker.JobTypeBootcPreManifest},
 		)
 		if err != nil {
 			if s.goroutinesCtx.Err() != nil {
