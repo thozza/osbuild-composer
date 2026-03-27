@@ -256,6 +256,64 @@ func (q *fsJobQueue) Dequeue(ctx context.Context, wID uuid.UUID, jobTypes, chann
 	return j.Id, j.Token, j.Dependencies, j.Type, j.Args, nil
 }
 
+func (q *fsJobQueue) DequeueAnyChannel(ctx context.Context, wID uuid.UUID, jobTypes []string) (uuid.UUID, uuid.UUID, []uuid.UUID, string, json.RawMessage, error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	// Return early if the context is already canceled.
+	if err := ctx.Err(); err != nil {
+		return uuid.Nil, uuid.Nil, nil, "", nil, jobqueue.ErrDequeueTimeout
+	}
+
+	// Add a new listener
+	c := make(chan struct{}, 1)
+	q.listeners[c] = struct{}{}
+	defer delete(q.listeners, c)
+
+	// Loop until finding a suitable job
+	var j *job
+	for {
+		var found bool
+		var err error
+		j, found, err = q.dequeueSuitableJob(jobTypes, nil)
+		if err != nil {
+			return uuid.Nil, uuid.Nil, nil, "", nil, err
+		}
+		if found {
+			break
+		}
+
+		// Unlock the mutex while polling channels, so that multiple goroutines
+		// can wait at the same time.
+		q.mu.Unlock()
+		select {
+		case <-c:
+		case <-ctx.Done():
+			// there's defer q.mu.Unlock(), so let's lock
+			q.mu.Lock()
+			return uuid.Nil, uuid.Nil, nil, "", nil, jobqueue.ErrDequeueTimeout
+		}
+		q.mu.Lock()
+	}
+
+	j.StartedAt = time.Now()
+
+	j.Token = uuid.New()
+	q.jobIdByToken[j.Token] = j.Id
+	q.heartbeats[j.Token] = time.Now()
+	if _, ok := q.workers[wID]; ok {
+		q.workers[wID].Tokens[j.Token] = struct{}{}
+		q.workerIDByToken[j.Token] = wID
+	}
+
+	err := q.db.Write(j.Id.String(), j)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, nil, "", nil, fmt.Errorf("error writing job %s: %v", j.Id, err)
+	}
+
+	return j.Id, j.Token, j.Dependencies, j.Type, j.Args, nil
+}
+
 func (q *fsJobQueue) DequeueByID(ctx context.Context, id, wID uuid.UUID) (uuid.UUID, []uuid.UUID, string, json.RawMessage, error) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -730,7 +788,10 @@ func jobMatchesCriteria(j *job, acceptedJobTypes []string, acceptedChannels []st
 		return false
 	}
 
-	return contains(acceptedJobTypes, j.Type) && contains(acceptedChannels, j.Channel)
+	if acceptedChannels != nil && !contains(acceptedChannels, j.Channel) {
+		return false
+	}
+	return contains(acceptedJobTypes, j.Type)
 }
 
 // AllRootJobIDs Return a list of all the top level(root) job uuids
