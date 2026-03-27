@@ -816,6 +816,62 @@ func (s *Server) RequestJobById(ctx context.Context, arch string, requestedJobId
 	return s.requestJob(ctx, arch, []string{}, requestedJobId, nil, uuid.Nil)
 }
 
+func (s *Server) RequestJobAnyChannel(ctx context.Context, arch string, jobTypes []string) (
+	jobId uuid.UUID, token uuid.UUID, jobType string, args json.RawMessage, dynamicArgs []json.RawMessage, err error) {
+
+	dequeueCtx := ctx
+	var cancel context.CancelFunc
+	if s.config.RequestJobTimeout != 0 {
+		dequeueCtx, cancel = context.WithTimeout(ctx, s.config.RequestJobTimeout)
+		defer cancel()
+	}
+
+	var depIDs []uuid.UUID
+	jobId, token, depIDs, jobType, args, err = s.jobs.DequeueAnyChannel(dequeueCtx, uuid.Nil, jobTypes)
+	if err != nil {
+		if err != jobqueue.ErrDequeueTimeout && err != jobqueue.ErrNotPending {
+			logrus.Errorf("dequeuing job failed: %v", err)
+		}
+		return
+	}
+
+	jobInfo, err := s.jobInfo(jobId, nil)
+	if err != nil {
+		logrus.Errorf("error retrieving job status: %v", err)
+	}
+
+	// Record how long the job has been pending for, that is either how
+	// long it has been queued for, in case it has no dependencies, or
+	// how long it has been since all its dependencies finished, if it
+	// has any.
+	pending := jobInfo.JobStatus.Queued
+	jobType = jobInfo.JobType
+
+	for _, depID := range depIDs {
+		var result json.RawMessage
+		var finished time.Time
+		_, _, result, _, _, finished, _, _, _, err = s.jobs.JobStatus(depID)
+		if err != nil {
+			return
+		}
+		if finished.After(pending) {
+			pending = finished
+		}
+		dynamicArgs = append(dynamicArgs, result)
+	}
+
+	if s.config.ArtifactsDir != "" {
+		err = os.MkdirAll(path.Join(s.config.ArtifactsDir, "tmp", token.String()), 0700)
+		if err != nil {
+			return
+		}
+	}
+
+	prometheus.DequeueJobMetrics(pending, jobInfo.JobStatus.Started, jobInfo.JobType, jobInfo.Channel, "")
+
+	return
+}
+
 func (s *Server) requestJob(ctx context.Context, arch string, jobTypes []string, requestedJobId uuid.UUID, channels []string, workerID uuid.UUID) (
 	jobId uuid.UUID, token uuid.UUID, jobType string, args json.RawMessage, dynamicArgs []json.RawMessage, err error) {
 	// treat osbuild jobs specially until we have found a generic way to
