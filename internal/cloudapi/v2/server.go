@@ -879,8 +879,17 @@ func serializeManifest(ctx context.Context, getManifestSource manifestSourceFunc
 		// the container embedding, so we need to get it from the manifest
 		// content field. There should be only one.
 		// TODO: We can't do this for bootc images that use more than just the base container.
+		containerSources := manifestSource.GetContainerSourceSpecs()
+		if len(containerSources) != 1 {
+			jobResult.JobError = clienterrors.New(
+				clienterrors.ErrorManifestGeneration,
+				fmt.Sprintf("expected exactly 1 pipeline with container sources, got %d", len(containerSources)),
+				nil,
+			)
+			return
+		}
 		var containerEmbedPipeline string
-		for name := range manifestSource.GetContainerSourceSpecs() {
+		for name := range containerSources {
 			containerEmbedPipeline = name
 			break
 		}
