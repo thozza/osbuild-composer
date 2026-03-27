@@ -958,11 +958,11 @@ func serializeManifest(ctx context.Context, getManifestSource manifestSourceFunc
 }
 
 // bootcPreManifestLoop is a long-running goroutine started at server init
-// that picks up pending BootcPreManifest jobs via RequestJob and spawns a
-// goroutine per job for parallel processing.
+// that picks up pending BootcPreManifest jobs via RequestJobAnyChannel and
+// spawns a goroutine per job for parallel processing.
 func (s *Server) bootcPreManifestLoop() {
-	const maxConcurentPreManifestJobs = 8
-	sem := make(chan struct{}, maxConcurentPreManifestJobs)
+	const maxConcurrentPreManifestJobs = 8
+	sem := make(chan struct{}, maxConcurrentPreManifestJobs)
 
 	for {
 		jobID, token, _, staticArgs, dynArgs, err := s.workers.RequestJobAnyChannel(

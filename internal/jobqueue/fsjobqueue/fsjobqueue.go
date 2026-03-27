@@ -724,7 +724,7 @@ func (q *fsJobQueue) hasAllFinishedDependencies(j *job) (bool, error) {
 // - must be pending
 // - its dependencies must be finished
 // - must be of one of the type from jobTypes
-// - must be of one of the channel from channels
+// - must be of one of the channel from channels (if channels is nil, any channel matches)
 //
 // If a suitable job is not found, false is returned.
 // If an error occurs during the search, it's returned.
