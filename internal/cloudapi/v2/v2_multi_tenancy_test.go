@@ -381,11 +381,11 @@ func TestMultitenancy(t *testing.T) {
 	}
 }
 
-// TestBootcMultitenancyPreManifestBlocked verifies that in the current
-// implementation, bootc composes submitted with a tenant channel have their
-// BootcPreManifest job stuck because bootcPreManifestLoop only dequeues
-// from the empty channel.
-func TestBootcMultitenancyPreManifestBlocked(t *testing.T) {
+// TestBootcMultitenancyPreManifestProcessed verifies that bootc composes
+// submitted with a tenant channel have their BootcPreManifest job processed
+// by the bootcPreManifestLoop, which uses RequestJobAnyChannel to dequeue
+// jobs regardless of channel.
+func TestBootcMultitenancyPreManifestProcessed(t *testing.T) {
 	apiServer, workerServer, q, cancel := newV2Server(t, t.TempDir(), &v2ServerOpts{enableJWT: true})
 	handler := apiServer.Handler("/api/image-builder-composer/v2")
 	defer cancel()
@@ -421,7 +421,6 @@ func TestBootcMultitenancyPreManifestBlocked(t *testing.T) {
 	require.NotEqual(t, uuid.Nil, preManifestJobID, "should have BootcPreManifest job")
 
 	// Finish the BootcInfoResolve job so the BootcPreManifest dependency is met.
-	// Dequeue it using the tenant channel via the worker server directly.
 	_, infoToken, _, _, _, err := workerServer.RequestJob(
 		context.Background(), test_distro.TestArch3Name,
 		[]string{worker.JobTypeBootcInfoResolve}, []string{"org-" + orgID}, uuid.Nil,
@@ -430,16 +429,14 @@ func TestBootcMultitenancyPreManifestBlocked(t *testing.T) {
 	err = workerServer.FinishJob(infoToken, rawValidBaseBootcInfoResult(t))
 	require.NoError(t, err)
 
-	// Wait briefly for the bootcPreManifestLoop to potentially pick up the job.
-	// The loop polls continuously, so 500ms is generous.
-	time.Sleep(500 * time.Millisecond)
-
-	// Verify the BootcPreManifest job is still pending (not started).
-	// This is the bug: the loop uses RequestJob with []string{""} which
-	// doesn't match the tenant channel "org-bootc-org-42".
-	_, _, _, _, started, _, _, _, _, err := q.JobStatus(preManifestJobID)
-	require.NoError(t, err)
-	require.True(t, started.IsZero(),
-		"BootcPreManifest job should NOT have started — bootcPreManifestLoop "+
-			"cannot dequeue from tenant channel with current RequestJob")
+	// Wait for the bootcPreManifestLoop to pick up and process the job.
+	// Poll with a timeout rather than a fixed sleep.
+	require.Eventually(t, func() bool {
+		_, _, _, _, started, finished, _, _, _, err := q.JobStatus(preManifestJobID)
+		require.NoError(t, err)
+		// Job should have been started (and ideally finished) by the loop
+		return !started.IsZero() || !finished.IsZero()
+	}, 5*time.Second, 50*time.Millisecond,
+		"BootcPreManifest job should have been started by bootcPreManifestLoop "+
+			"via RequestJobAnyChannel")
 }
