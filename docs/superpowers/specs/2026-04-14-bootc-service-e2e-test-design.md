@@ -24,7 +24,7 @@ No existing test covers: bootc compose + Cloud API + JWT + private registry + ex
 
 - `Schutzfile` -- extended with bootc container ref mappings
 - `.gitlab-ci.yml` -- new CI job
-- `test/cases/api/common/jwt.sh` (new) -- extracted JWT mock provider setup helper
+- `tools/provision.sh` -- already supports JWT mode (`provision.sh jwt`), no new file needed
 - `test/cases/api/common/executor.sh` (new) -- extracted AWS EC2 executor setup helper
 
 ### Directory layout
@@ -40,7 +40,6 @@ test/cases/
       common.sh                 # SSH, instance checks, customization verification
       aws.sh                    # AWS CLI install/setup
       s3.sh                     # S3 request creation, verifyDisk(), verifyEdgeCommit()
-      jwt.sh                    # JWT mock provider setup (new)
       executor.sh               # AWS EC2 executor setup (new)
     bootc/                      # handlers for api-bootc-service.sh (new)
       guest.s3.sh
@@ -100,21 +99,18 @@ The driver accepts one argument: `IMAGE_TYPE` (e.g., `guest-image`). It selects 
 - Source the handler script from `api/bootc/` based on `IMAGE_TYPE`
 - Call `checkEnv()` to verify required env vars
 
-### Step 2: JWT authentication setup
+### Step 2: JWT authentication and composer configuration
 
-Extracted to a reusable helper `api/common/jwt.sh` so both `api.sh` and `api-bootc-service.sh` can use it.
+JWT setup is handled by calling `provision.sh jwt`, which already exists and provides:
+- X.509 certificate generation
+- JWT composer config template (`osbuild-composer-jwt.toml`) with `enable_jwt`, `jwt_keys_urls`, `jwt_tenant_provider_fields`
+- JWT worker config template (`osbuild-worker-jwt.toml`) with `oauth_url`, `client_id`, `offline_token`
+- Mock OpenID providers (`run-mock-auth-servers.sh`): HTTPS on port 8082 for composer, HTTP on port 8081 for worker
+- Starting the correct systemd units: Cloud API socket + remote worker
 
-- Write composer config with JWT enabled (`enable_jwt = true`, `jwt_keys_urls`, `jwt_tenant_provider_fields`)
-- Start mock OpenID provider (HTTPS instance on port 8080 for composer, HTTP instance on port 8081 for worker)
-- Obtain a JWT token for API calls
-- This helper can be adopted by `api.sh` later to replace its inline JWT setup
-
-### Step 3: Composer configuration
-
-Write `/etc/osbuild-composer/osbuild-composer.toml` with:
-- JWT auth settings (from step 2)
+After provisioning, the driver appends additional settings to `/etc/osbuild-composer/osbuild-composer.toml`:
+- `[worker]` DB connection settings (PostgreSQL container from step 1)
 - `[bootc] use_remote_container_source = true`
-- DB connection settings (PostgreSQL container from step 1)
 
 Restart `osbuild-composer`.
 
@@ -254,5 +250,5 @@ API-bootc-service:
 6. **Schutzfile for container ref pinning** -- consistent with existing dependency management; structured as image-type -> ref-type -> arch for future extensibility (`build`, `installer` ref types).
 7. **Executor provisioned via SSH** (worker-executor.sh pattern) -- Packer-built AMIs are not available in PR pipelines (creation is skipped for PRs, no artifact passing mechanism exists).
 8. **Offline image verification** (`osbuild-image-info`) for qcow2 initially -- consistent with existing `guest-image` + `aws.s3` behavior; pluggable verification allows boot-testing to be added later per image type.
-9. **JWT setup extracted to shared helper** -- avoids duplication between `api.sh` and `api-bootc-service.sh`; `api.sh` can adopt it later.
+9. **JWT setup via existing `provision.sh jwt`** -- no new helper needed; `provision.sh` already handles JWT certificates, config templates, mock OpenID providers, and systemd units. The test driver appends DB and bootc config after provisioning.
 10. **Executor setup extracted to shared helper** -- avoids duplication between `api-bootc-service.sh` and `worker-executor.sh`; `worker-executor.sh` can adopt it later.
