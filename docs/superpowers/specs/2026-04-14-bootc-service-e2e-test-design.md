@@ -60,9 +60,6 @@ The Schutzfile is extended with a `bootc` key under each distro's `dependencies`
         "guest-image": {
           "x86_64": {
             "base": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest"
-          },
-          "aarch64": {
-            "base": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest"
           }
         }
       }
