@@ -46,7 +46,7 @@ test/cases/
 
 ## Schutzfile Bootc Container Ref Mapping
 
-The Schutzfile is extended with a `bootc` key under each distro's `dependencies` section. The mapping is structured as: image-type -> ref-type -> arch -> container tag.
+The Schutzfile is extended with a `bootc` key under each distro's `dependencies` section. The mapping is structured as: image-type -> ref-type -> arch -> full container reference (including registry host, image name, and tag).
 
 ```json
 {
@@ -58,8 +58,8 @@ The Schutzfile is extended with a `bootc` key under each distro's `dependencies`
       "bootc": {
         "guest-image": {
           "base": {
-            "x86_64": "rhel-10.1-qcow2:latest",
-            "aarch64": "rhel-10.1-qcow2:latest"
+            "x86_64": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest",
+            "aarch64": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest"
           }
         }
       }
@@ -70,16 +70,19 @@ The Schutzfile is extended with a `bootc` key under each distro's `dependencies`
 
 - `base` is the primary container ref (the only one used initially).
 - Future ref types (`build`, `installer`) can be added under the same image-type without restructuring.
-- The registry URL comes from the CI env var `BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_URL`; the Schutzfile contains only the image name and tag.
+- The full container reference (registry + image + tag) is stored in the Schutzfile. This makes it easy to override with a test image from a different registry.
 
-The test driver constructs the full ref:
+The test driver reads the ref directly:
 
 ```bash
-BOOTC_CONTAINER_TAG=$(jq -r \
+BOOTC_CONTAINER_REF="${BOOTC_CONTAINER_REF_OVERRIDE:-$(jq -r \
   ".[\"${ID}-${VERSION_ID}\"].dependencies.bootc[\"${IMAGE_TYPE}\"].base[\"${ARCH}\"]" \
-  Schutzfile)
-BOOTC_CONTAINER_REF="${BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_URL}/${BOOTC_CONTAINER_TAG}"
+  Schutzfile)}"
 ```
+
+The optional `BOOTC_CONTAINER_REF_OVERRIDE` env var allows pointing the test at a different image/registry without modifying the Schutzfile.
+
+The registry host for `podman login` is extracted from the ref. The registry credentials (`BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_USER`, `BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS`) are provided as CI env vars.
 
 ## Test Driver Flow (`api-bootc-service.sh`)
 
@@ -114,10 +117,11 @@ Restart `osbuild-composer`.
 ### Step 4: Worker configuration
 
 - Create AWS EC2 keypair for executor
+- Extract the registry host from `$BOOTC_CONTAINER_REF`
 - Run `podman login --authfile /etc/osbuild-worker/containerauth.json` using:
   - `$BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_USER`
   - `$BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS`
-  - `$BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_URL`
+  - Registry host extracted from the container ref
 - Create systemd drop-in for the worker service unit setting `Environment="REGISTRY_AUTH_FILE=/etc/osbuild-worker/containerauth.json"`
 - Write `/etc/osbuild-worker/osbuild-worker.toml` with:
   - `[osbuild_executor]` type = `aws.ec2`, key_name = keypair from above
@@ -175,7 +179,7 @@ The handler sources `api/aws.s3.sh` to inherit most functions, then overrides on
 
 ### Overridden
 
-- `checkEnv()` -- verifies AWS credentials (`AWS_REGION`, `AWS_BUCKET`, `V2_AWS_ACCESS_KEY_ID`, `V2_AWS_SECRET_ACCESS_KEY`) plus bootc registry vars (`BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_URL`). Does not require `AWS_API_TEST_SHARE_ACCOUNT` (not needed for S3 target).
+- `checkEnv()` -- verifies AWS credentials (`AWS_REGION`, `AWS_BUCKET`, `V2_AWS_ACCESS_KEY_ID`, `V2_AWS_SECRET_ACCESS_KEY`) plus bootc registry credentials (`BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_USER`, `BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS`). Does not require `AWS_API_TEST_SHARE_ACCOUNT` (not needed for S3 target).
 - `createReqFile()` -- writes the bootc-specific compose request:
 
 ```json
@@ -229,7 +233,7 @@ API-bootc-service:
 
 - Runner: `aws/rhel-10.1-x86_64`
 - IAM profile: `worker-executor` (same as existing `WorkerExecutor` job, required for executor EC2 instance management)
-- Registry credentials (`BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_USER`, `BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS`, `BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_URL`) are defined as CI/CD variables in GitLab (masked/protected)
+- Registry credentials (`BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_USER`, `BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS`) are defined as CI/CD variables in GitLab (masked/protected)
 - Initially a single combination (guest-image); can be extended to a matrix later
 
 ## Key Design Decisions
