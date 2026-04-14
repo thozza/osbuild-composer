@@ -25,6 +25,7 @@ No existing test covers: bootc compose + Cloud API + JWT + private registry + ex
 - `Schutzfile` -- extended with bootc container ref mappings
 - `.gitlab-ci.yml` -- new CI job
 - `test/cases/api/common/jwt.sh` (new) -- extracted JWT mock provider setup helper
+- `test/cases/api/common/executor.sh` (new) -- extracted AWS EC2 executor setup helper
 
 ### Directory layout
 
@@ -40,6 +41,7 @@ test/cases/
       aws.sh                    # AWS CLI install/setup
       s3.sh                     # S3 request creation, verifyDisk(), verifyEdgeCommit()
       jwt.sh                    # JWT mock provider setup (new)
+      executor.sh               # AWS EC2 executor setup (new)
     bootc/                      # handlers for api-bootc-service.sh (new)
       guest.s3.sh
 ```
@@ -134,13 +136,17 @@ No `[containers]` section in `osbuild-worker.toml`. The `REGISTRY_AUTH_FILE` env
 
 ### Step 5: Executor provisioning
 
-Following the established `worker-executor.sh` pattern:
+Extracted to a reusable helper `api/common/executor.sh` (following the established `worker-executor.sh` pattern) so both this test and `worker-executor.sh` can use it. The helper exposes `setupExecutor()` and `cleanupExecutor()` functions.
 
+`setupExecutor()`:
 - Wait for the executor EC2 instance to appear (tagged with parent instance ID)
 - SSH into the executor
 - Install osbuild and osbuild-composer packages from CI S3 repos (osbuild version pinned in Schutzfile, osbuild-composer from current CI commit)
 - Open firewall port for worker-executor communication
 - Start `osbuild-worker-executor`
+
+`cleanupExecutor()`:
+- Delete AWS keypair
 
 ### Step 6: Pre-compose verification
 
@@ -249,3 +255,4 @@ API-bootc-service:
 7. **Executor provisioned via SSH** (worker-executor.sh pattern) -- Packer-built AMIs are not available in PR pipelines (creation is skipped for PRs, no artifact passing mechanism exists).
 8. **Offline image verification** (`osbuild-image-info`) for qcow2 initially -- consistent with existing `guest-image` + `aws.s3` behavior; pluggable verification allows boot-testing to be added later per image type.
 9. **JWT setup extracted to shared helper** -- avoids duplication between `api.sh` and `api-bootc-service.sh`; `api.sh` can adopt it later.
+10. **Executor setup extracted to shared helper** -- avoids duplication between `api-bootc-service.sh` and `worker-executor.sh`; `worker-executor.sh` can adopt it later.
