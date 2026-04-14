@@ -46,7 +46,7 @@ test/cases/
 
 ## Schutzfile Bootc Container Ref Mapping
 
-The Schutzfile is extended with a `bootc` key under each distro's `dependencies` section. The mapping is structured as: image-type -> ref-type -> arch -> full container reference (including registry host, image name, and tag).
+The Schutzfile is extended with a `bootc` key under each distro's `dependencies` section. The mapping is structured as: image-type -> arch -> ref-type -> full container reference (including registry host, image name, and tag).
 
 ```json
 {
@@ -57,9 +57,11 @@ The Schutzfile is extended with a `bootc` key under each distro's `dependencies`
       },
       "bootc": {
         "guest-image": {
-          "base": {
-            "x86_64": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest",
-            "aarch64": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest"
+          "x86_64": {
+            "base": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest"
+          },
+          "aarch64": {
+            "base": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest"
           }
         }
       }
@@ -69,14 +71,14 @@ The Schutzfile is extended with a `bootc` key under each distro's `dependencies`
 ```
 
 - `base` is the primary container ref (the only one used initially).
-- Future ref types (`build`, `installer`) can be added under the same image-type without restructuring.
+- Future ref types (`build`, `installer`) can be added as siblings under the arch key without restructuring.
 - The full container reference (registry + image + tag) is stored in the Schutzfile. This makes it easy to override with a test image from a different registry.
 
 The test driver reads the ref directly:
 
 ```bash
 BOOTC_CONTAINER_REF="${BOOTC_CONTAINER_REF_OVERRIDE:-$(jq -r \
-  ".[\"${ID}-${VERSION_ID}\"].dependencies.bootc[\"${IMAGE_TYPE}\"].base[\"${ARCH}\"]" \
+  ".[\"${ID}-${VERSION_ID}\"].dependencies.bootc[\"${IMAGE_TYPE}\"][\"${ARCH}\"].base" \
   Schutzfile)}"
 ```
 
@@ -227,11 +229,11 @@ API-bootc-service:
     - schutzbot/deploy.sh
     - /usr/libexec/tests/osbuild-composer/api-bootc-service.sh guest-image
   variables:
-    RUNNER: aws/rhel-10.1-x86_64
+    RUNNER: aws/rhel-10.1-ga-x86_64
     IAM_INSTANCE_PROFILE: worker-executor
 ```
 
-- Runner: `aws/rhel-10.1-x86_64`
+- Runner: `aws/rhel-10.1-ga-x86_64`
 - IAM profile: `worker-executor` (same as existing `WorkerExecutor` job, required for executor EC2 instance management)
 - Registry credentials (`BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_USER`, `BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS`) are defined as CI/CD variables in GitLab (masked/protected)
 - Initially a single combination (guest-image); can be extended to a matrix later
