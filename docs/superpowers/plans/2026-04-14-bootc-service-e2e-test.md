@@ -535,9 +535,8 @@ sudo "${CONTAINER_RUNTIME}" login \
     --password "${BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS}" \
     "${REGISTRY_HOST}"
 
-# Set REGISTRY_AUTH_FILE for all worker operations via systemd drop-in
-WORKER_UNIT=$(sudo systemctl list-units | grep -o -E "osbuild-remote-worker@\S+\.service")
-WORKER_DROPIN_DIR="/etc/systemd/system/${WORKER_UNIT}.d"
+# Set REGISTRY_AUTH_FILE for all worker instances via systemd drop-in
+WORKER_DROPIN_DIR="/etc/systemd/system/osbuild-remote-worker@.service.d"
 sudo mkdir -p "${WORKER_DROPIN_DIR}"
 sudo tee "${WORKER_DROPIN_DIR}/registry-auth.conf" > /dev/null <<EOF
 [Service]
@@ -582,7 +581,7 @@ EOF
 fi
 
 sudo systemctl daemon-reload
-sudo systemctl restart "${WORKER_UNIT}"
+sudo systemctl restart "osbuild-remote-worker@localhost:8700.service"
 
 #
 # Install cloud provider client tools (from handler)
@@ -598,8 +597,8 @@ waitForExecutorInstance
 provisionExecutor
 startExecutor
 
-# Get worker unit for journal tailing
-sudo journalctl -af -n 1 -u "${WORKER_UNIT}" &
+# Tail worker journal for diagnostics
+sudo journalctl -af -n 1 -u "osbuild-remote-worker@localhost:8700.service" &
 KILL_PIDS+=("$!")
 
 #
