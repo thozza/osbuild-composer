@@ -181,11 +181,11 @@ Expected: No output (no syntax errors)
 
 ```bash
 git add test/cases/api/common/executor.sh
-git commit -m "test: extract executor setup helper to api/common/executor.sh
+git commit -m "test: extract executor setup into shared helper
 
-Reusable functions for AWS EC2 executor provisioning: keypair
-management, instance discovery, package installation, and executor
-startup. Extracted from worker-executor.sh pattern."
+Allow the new bootc service test and worker-executor.sh
+to share executor provisioning logic instead of
+duplicating the keypair, instance wait, and SSH setup."
 ```
 
 ---
@@ -258,9 +258,9 @@ Expected: No output (no syntax errors)
 git add test/cases/api/bootc/guest.s3.sh
 git commit -m "test: add bootc handler for guest-image + aws.s3
 
-Sources api/aws.s3.sh and overrides checkEnv() and createReqFile()
-with bootc-specific compose request. Inherits installClient(),
-checkUploadStatusOptions(), verify(), and cleanup()."
+Reuse the existing S3 verification and cleanup from
+aws.s3.sh, only overriding the compose request to use
+the bootc API shape instead of the traditional one."
 ```
 
 ---
@@ -317,10 +317,11 @@ Expected: No output (valid JSON)
 
 ```bash
 git add Schutzfile
-git commit -m "test: add bootc container ref mapping to Schutzfile
+git commit -m "test: pin bootc container refs in Schutzfile
 
-Pin guest-image bootc container refs for rhel-10.1 (x86_64, aarch64).
-Full container references include the registry host for easy override."
+Keep bootc image refs in one place so the e2e test
+can look them up by distro/image-type/arch, and so
+we can update them independently of the test code."
 ```
 
 ---
@@ -742,12 +743,11 @@ Expected: No output (no syntax errors)
 
 ```bash
 git add test/cases/api-bootc-service.sh
-git commit -m "test: add bootc service end-to-end functional test driver
+git commit -m "test: add bootc service e2e test driver
 
-New test api-bootc-service.sh exercises the full production-like
-pipeline for bootc composes: JWT auth, private registry, AWS EC2
-executor, S3 upload, and offline image verification. Reads container
-refs from Schutzfile and supports per-image-type handlers."
+Cover the production-like bootc compose pipeline that
+no existing test exercises: JWT + private registry +
+executor + cloud upload, all in one flow."
 ```
 
 ---
@@ -781,11 +781,11 @@ API-bootc-service:
 
 ```bash
 git add .gitlab-ci.yml
-git commit -m "ci: add API-bootc-service job for bootc e2e test
+git commit -m "ci: wire up the bootc service e2e test
 
-Runs api-bootc-service.sh with guest-image on rhel-10.1-ga-x86_64
-with worker-executor IAM profile. Registry credentials are provided
-via GitLab CI/CD variables."
+Run the new api-bootc-service.sh in CI so we catch
+regressions in the production bootc compose flow on
+every PR and merge."
 ```
 
 ---
