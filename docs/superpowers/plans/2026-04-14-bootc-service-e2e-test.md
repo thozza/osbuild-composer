@@ -581,7 +581,7 @@ EOF
 fi
 
 sudo systemctl daemon-reload
-sudo systemctl restart "osbuild-remote-worker@localhost:8700.service"
+sudo systemctl restart "osbuild-remote-worker@*"
 
 #
 # Install cloud provider client tools (from handler)
@@ -598,7 +598,7 @@ provisionExecutor
 startExecutor
 
 # Tail worker journal for diagnostics
-sudo journalctl -af -n 1 -u "osbuild-remote-worker@localhost:8700.service" &
+sudo journalctl -af -n 1 -u "osbuild-remote-worker@*" &
 KILL_PIDS+=("$!")
 
 #
