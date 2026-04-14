@@ -172,10 +172,14 @@ function setupExecutor() {
 }
 ```
 
-- [ ] **Step 2: Verify the file is syntactically valid**
+- [ ] **Step 2: Verify syntax and lint**
 
-Run: `bash -n test/cases/api/common/executor.sh`
-Expected: No output (no syntax errors)
+Run:
+```bash
+bash -n test/cases/api/common/executor.sh
+shellcheck test/cases/api/common/executor.sh
+```
+Expected: No errors. Fix any shellcheck warnings before proceeding.
 
 - [ ] **Step 3: Commit**
 
@@ -247,10 +251,14 @@ EOF
 }
 ```
 
-- [ ] **Step 2: Verify the file is syntactically valid**
+- [ ] **Step 2: Verify syntax and lint**
 
-Run: `bash -n test/cases/api/bootc/guest.s3.sh`
-Expected: No output (no syntax errors)
+Run:
+```bash
+bash -n test/cases/api/bootc/guest.s3.sh
+shellcheck test/cases/api/bootc/guest.s3.sh
+```
+Expected: No errors. Fix any shellcheck warnings before proceeding.
 
 - [ ] **Step 3: Commit**
 
@@ -734,10 +742,14 @@ exit 0
 
 Run: `chmod +x test/cases/api-bootc-service.sh`
 
-- [ ] **Step 3: Verify the file is syntactically valid**
+- [ ] **Step 3: Verify syntax and lint**
 
-Run: `bash -n test/cases/api-bootc-service.sh`
-Expected: No output (no syntax errors)
+Run:
+```bash
+bash -n test/cases/api-bootc-service.sh
+shellcheck test/cases/api-bootc-service.sh
+```
+Expected: No errors. Fix any shellcheck warnings before proceeding.
 
 - [ ] **Step 4: Commit**
 
@@ -794,16 +806,19 @@ every PR and merge."
 
 Final check that all files are consistent, syntactically valid, and the spec is fully covered.
 
-- [ ] **Step 1: Verify all new bash files pass syntax check**
+- [ ] **Step 1: Verify all new bash files pass syntax and lint checks**
 
 Run:
 ```bash
-bash -n test/cases/api/common/executor.sh && echo "executor.sh OK"
-bash -n test/cases/api/bootc/guest.s3.sh && echo "guest.s3.sh OK"
-bash -n test/cases/api-bootc-service.sh && echo "api-bootc-service.sh OK"
+bash -n test/cases/api/common/executor.sh && echo "executor.sh syntax OK"
+bash -n test/cases/api/bootc/guest.s3.sh && echo "guest.s3.sh syntax OK"
+bash -n test/cases/api-bootc-service.sh && echo "api-bootc-service.sh syntax OK"
+shellcheck test/cases/api/common/executor.sh && echo "executor.sh lint OK"
+shellcheck test/cases/api/bootc/guest.s3.sh && echo "guest.s3.sh lint OK"
+shellcheck test/cases/api-bootc-service.sh && echo "api-bootc-service.sh lint OK"
 ```
 
-Expected: All three report OK.
+Expected: All six report OK.
 
 - [ ] **Step 2: Verify Schutzfile is valid JSON**
 
