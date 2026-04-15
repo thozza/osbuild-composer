@@ -175,12 +175,12 @@ The handler sources `api/aws.s3.sh` to inherit most functions, then overrides on
 
 - `installClient()` -- AWS CLI setup
 - `checkUploadStatusOptions()` -- verifies S3 URL contains expected bucket
-- `verify()` -- downloads qcow2 from S3 presigned URL, calls `verifyDisk()` for offline inspection via `osbuild-image-info`
 - `cleanup()` -- removes S3 objects
 
 ### Overridden
 
 - `checkEnv()` -- verifies AWS credentials (`AWS_REGION`, `AWS_BUCKET`, `V2_AWS_ACCESS_KEY_ID`, `V2_AWS_SECRET_ACCESS_KEY`) plus bootc registry credentials (`BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_USER`, `BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS`). Does not require `AWS_API_TEST_SHARE_ACCOUNT` (not needed for S3 target).
+- `verify()` -- downloads qcow2 from S3 presigned URL, validates with `osbuild-image-info` and saves image info to artifacts. Does not call the inherited `verifyDisk()` because it asserts customizations (`user1`, `user2`, `postgresql`) that bootc composes do not include.
 - `createReqFile()` -- writes the bootc-specific compose request:
 
 ```json
@@ -244,8 +244,8 @@ API-bootc-service:
 3. **Handler reuse via sourcing** -- `api/bootc/guest.s3.sh` sources `api/aws.s3.sh` and overrides only `checkEnv()` and `createReqFile()`, minimizing duplication.
 4. **`REGISTRY_AUTH_FILE` via systemd drop-in** instead of `[containers]` config in `osbuild-worker.toml` -- simpler, covers all container operations uniformly (BootcInfoResolveJob, ContainerResolveJob, osbuild).
 5. **JWT from the start** -- the entire compose flow runs under JWT auth to test BootcPreManifest job in a multi-tenant context.
-6. **Schutzfile for container ref pinning** -- consistent with existing dependency management; structured as image-type -> ref-type -> arch for future extensibility (`build`, `installer` ref types).
+6. **Schutzfile for container ref pinning** -- consistent with existing dependency management; structured as image-type -> arch -> ref-type for future extensibility (`build`, `installer` ref types).
 7. **Executor provisioned via SSH** (worker-executor.sh pattern) -- Packer-built AMIs are not available in PR pipelines (creation is skipped for PRs, no artifact passing mechanism exists).
-8. **Offline image verification** (`osbuild-image-info`) for qcow2 initially -- consistent with existing `guest-image` + `aws.s3` behavior; pluggable verification allows boot-testing to be added later per image type.
+8. **Offline image verification** (`osbuild-image-info`) for qcow2 initially -- the bootc handler overrides `verify()` to skip the customization-specific assertions in `verifyDisk()` (which checks for users and packages from the traditional compose request). Pluggable verification allows boot-testing and customization checks to be added later per image type.
 9. **JWT setup via existing `provision.sh jwt`** -- no new helper needed; `provision.sh` already handles JWT certificates, config templates, mock OpenID providers, and systemd units. The test driver appends DB and bootc config after provisioning.
 10. **Executor setup extracted to shared helper** -- avoids duplication between `api-bootc-service.sh` and `worker-executor.sh`; `worker-executor.sh` can adopt it later.

@@ -196,7 +196,7 @@ duplicating the keypair, instance wait, and SSH setup."
 
 ### Task 2: Create Bootc Handler for guest-image + aws.s3
 
-Create the handler script that sources the existing `api/aws.s3.sh` and overrides only what differs for bootc composes.
+Create the handler script that sources the existing `api/aws.s3.sh` and overrides what differs for bootc composes: `checkEnv()`, `createReqFile()`, and `verify()`. The `verify()` override is needed because the inherited `verifyDisk()` asserts customizations (`user1`, `user2`, `postgresql`) that bootc composes do not include.
 
 **Files:**
 - Create: `test/cases/api/bootc/guest.s3.sh`
@@ -215,8 +215,8 @@ Write `test/cases/api/bootc/guest.s3.sh`:
 
 # Handler for bootc guest-image compose with aws.s3 upload target.
 # Sources the non-bootc aws.s3 handler to inherit installClient(),
-# checkUploadStatusOptions(), verify(), and cleanup(). Overrides
-# checkEnv() and createReqFile() for bootc-specific behavior.
+# checkUploadStatusOptions(), and cleanup(). Overrides checkEnv(),
+# createReqFile(), and verify() for bootc-specific behavior.
 
 source /usr/libexec/tests/osbuild-composer/api/aws.s3.sh
 
@@ -224,6 +224,36 @@ source /usr/libexec/tests/osbuild-composer/api/aws.s3.sh
 function checkEnv() {
     printenv AWS_REGION AWS_BUCKET V2_AWS_ACCESS_KEY_ID V2_AWS_SECRET_ACCESS_KEY > /dev/null
     printenv BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_USER BOOTC_FOUNDRY_DERIVED_CONTAINERS_REGISTRY_PASS > /dev/null
+}
+
+# Override: verify the built image without checking for customizations
+# (bootc composes do not include user or package customizations by default)
+function verify() {
+    local S3_URL
+    S3_URL=$(echo "$UPLOAD_OPTIONS" | jq -r '.url')
+    greenprint "Verifying S3 object at ${S3_URL}"
+
+    # Tag the resource as a test file
+    local S3_FILENAME
+    S3_FILENAME=$(echo "import urllib.parse; print(urllib.parse.urlsplit('$S3_URL').path.strip('/'))" | python3 -)
+
+    # tag the object, also verifying that it exists in the bucket as expected
+    $AWS_CMD s3api put-object-tagging \
+        --bucket "${AWS_BUCKET}" \
+        --key "${S3_FILENAME}" \
+        --tagging '{"TagSet": [{ "Key": "gitlab-ci-test", "Value": "true" }]}'
+
+    greenprint "✅ Successfully tagged S3 object"
+
+    # Download and inspect the disk image
+    curl "${S3_URL}" --output "${WORKDIR}/disk.qcow2"
+
+    greenprint "Verifying disk image with osbuild-image-info"
+    local INFOFILE="${WORKDIR}/disk.qcow2-info.json"
+    sudo osbuild-image-info "${WORKDIR}/disk.qcow2" | tee "${INFOFILE}" > /dev/null
+    cp -v "${INFOFILE}" "${ARTIFACTS}/image-info.json"
+
+    greenprint "✅ Successfully verified S3 object"
 }
 
 # Override: create bootc-specific compose request
@@ -558,24 +588,7 @@ type = "aws.ec2"
 key_name = "key-for-${INSTANCE_ID}-executor"
 EOF
 
-# Add AWS credentials if available
-V2_AWS_ACCESS_KEY_ID="${V2_AWS_ACCESS_KEY_ID:-}"
-V2_AWS_SECRET_ACCESS_KEY="${V2_AWS_SECRET_ACCESS_KEY:-}"
-if [[ -n "$V2_AWS_ACCESS_KEY_ID" && -n "$V2_AWS_SECRET_ACCESS_KEY" ]]; then
-    set +x
-    sudo tee /etc/osbuild-worker/aws-credentials.toml > /dev/null <<EOF
-[default]
-aws_access_key_id = "$V2_AWS_ACCESS_KEY_ID"
-aws_secret_access_key = "$V2_AWS_SECRET_ACCESS_KEY"
-EOF
-    sudo tee -a /etc/osbuild-worker/osbuild-worker.toml > /dev/null <<EOF
-
-[aws]
-credentials = "/etc/osbuild-worker/aws-credentials.toml"
-bucket = "${AWS_BUCKET}"
-EOF
-    set -x
-fi
+# AWS credentials are already configured by provision.sh
 
 sudo systemctl daemon-reload
 sudo systemctl restart "osbuild-remote-worker@*"
@@ -845,6 +858,6 @@ Review the spec's "Key Design Decisions" section against implementation:
 5. JWT from start -- yes, `provision.sh jwt` called first
 6. Schutzfile for container refs -- yes, full refs with override support
 7. Executor via SSH -- yes, via `executor.sh` helper
-8. Offline verification -- yes, inherits `verifyDisk()` from `api/common/s3.sh`
+8. Offline verification -- yes, overrides `verify()` to use `osbuild-image-info` without the customization checks in `verifyDisk()`
 9. JWT setup extracted -- handled by existing `provision.sh jwt` + `run-mock-auth-servers.sh`
 10. Executor setup extracted -- yes, `api/common/executor.sh`
