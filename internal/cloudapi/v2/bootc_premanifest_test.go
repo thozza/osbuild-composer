@@ -49,6 +49,10 @@ func rawValidBaseBootcInfoResult(t *testing.T) json.RawMessage {
 		OSRelease: osinfo.OSRelease{
 			ID:        "centos",
 			VersionID: "9",
+			Name:      "CentOS Stream",
+		},
+		KernelInfo: &osinfo.KernelInfo{
+			Version: "5.14.0-427.el9.x86_64",
 		},
 	}
 	data, err := json.Marshal(osInfo)
@@ -333,14 +337,20 @@ func enqueuePreManifestWithResolvedDep(t *testing.T, ws *worker.Server, arch str
 // assertValidPreManifestResult checks that a BootcPreManifestJobResult
 // completed without error and contains the expected container resolve data
 // for the test fixture container (centos-bootc:stream9 on x86_64).
-func assertValidPreManifestResult(t *testing.T, result worker.BootcPreManifestJobResult, arch string, specs []worker.BootcInfoResolveJobSpec, useRemoteContainerSource bool) {
+func assertValidPreManifestResult(t *testing.T, result worker.BootcPreManifestJobResult, arch string, specs []worker.BootcInfoResolveJobSpec, useRemoteContainerSource bool, imageType string) {
 	t.Helper()
 
 	require.Nil(t, result.JobError, "expected no job error, got: %v", result.JobError)
 	assert.Equal(t, arch, result.ContainerResolveJobArgs.Arch)
-	assert.Len(t, result.ContainerResolveJobArgs.PipelineSpecs, 2, "expected 2 pipelines specs")
-	assert.Len(t, result.ContainerResolveJobArgs.PipelineSpecs["image"], 1, "expected 1 container spec in image pipeline")
 	assert.Len(t, result.ContainerResolveJobArgs.PipelineSpecs["build"], 1, "expected 1 container spec in build pipeline")
+	if imageType == "bootc-installer" {
+		assert.Len(t, result.ContainerResolveJobArgs.PipelineSpecs, 3, "expected 3 pipeline specs (build, anaconda-tree, bootiso-tree)")
+		assert.Len(t, result.ContainerResolveJobArgs.PipelineSpecs["anaconda-tree"], 1, "expected 1 container spec in anaconda-tree pipeline")
+		assert.Len(t, result.ContainerResolveJobArgs.PipelineSpecs["bootiso-tree"], 1, "expected 1 container spec in bootiso-tree pipeline")
+	} else {
+		assert.Len(t, result.ContainerResolveJobArgs.PipelineSpecs, 2, "expected 2 pipeline specs (build, image)")
+		assert.Len(t, result.ContainerResolveJobArgs.PipelineSpecs["image"], 1, "expected 1 container spec in image pipeline")
+	}
 
 	// verify that all specs have the appropriate Local setting, based on the useRemoteContainerSource flag
 	for _, pipelineSpecs := range result.ContainerResolveJobArgs.PipelineSpecs {
@@ -492,6 +502,24 @@ func TestHandleBootcPreManifest_HappyPath(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:                     "bootc-installer/aws.s3",
+			imageType:                "bootc-installer",
+			useRemoteContainerSource: true,
+			uploadTargets: []worker.BootcUploadTarget{
+				{Type: "aws.s3", Options: json.RawMessage(`{"region":"us-east-1"}`)},
+			},
+			expectedTargets: []expectedTarget{
+				{
+					name: target.TargetNameAWSS3,
+					verify: func(t *testing.T, tgt *target.Target) {
+						opts, ok := tgt.Options.(*target.AWSS3TargetOptions)
+						require.True(t, ok, "expected AWSS3TargetOptions")
+						assert.Equal(t, "us-east-1", opts.Region)
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -504,11 +532,15 @@ func TestHandleBootcPreManifest_HappyPath(t *testing.T) {
 				},
 			}
 			archi := arch.ARCH_X86_64.String()
-			preManifestJobID := enqueuePreManifestWithResolvedDep(t, workerServer, archi, specs, distro.ImageOptions{
+			imageOptions := distro.ImageOptions{
 				Bootc: &distro.BootcImageOptions{
 					UseRemoteContainerSource: tc.useRemoteContainerSource,
 				},
-			}, tc.uploadTargets, tc.imageType)
+			}
+			if tc.imageType == "bootc-installer" {
+				imageOptions.Bootc.InstallerPayloadRef = "quay.io/centos-bootc/centos-bootc:stream9"
+			}
+			preManifestJobID := enqueuePreManifestWithResolvedDep(t, workerServer, archi, specs, imageOptions, tc.uploadTargets, tc.imageType)
 
 			// Dequeue the pre-manifest job (it should be pending now)
 			jobID, preManifestToken, _, staticArgs, dynArgs, err := workerServer.RequestJob(
@@ -527,7 +559,7 @@ func TestHandleBootcPreManifest_HappyPath(t *testing.T) {
 			require.NotNil(t, jobInfo)
 			assert.False(t, jobInfo.JobStatus.Finished.IsZero(), "job should be finished")
 
-			assertValidPreManifestResult(t, readResult, archi, specs, tc.useRemoteContainerSource)
+			assertValidPreManifestResult(t, readResult, archi, specs, tc.useRemoteContainerSource, tc.imageType)
 
 			if len(tc.expectedTargets) > 0 {
 				require.Len(t, readResult.Targets, len(tc.expectedTargets), "expected %d targets", len(tc.expectedTargets))
@@ -573,8 +605,9 @@ func TestBootcPreManifestLoop_PicksUpJob(t *testing.T) {
 		},
 	}
 	archi := arch.ARCH_X86_64.String()
+	imgType := "qcow2"
 
-	preManifestJobID := enqueuePreManifestWithResolvedDep(t, workerServer, archi, specs, distro.ImageOptions{}, nil, "qcow2")
+	preManifestJobID := enqueuePreManifestWithResolvedDep(t, workerServer, archi, specs, distro.ImageOptions{}, nil, imgType)
 
 	// Wait for the loop to pick up and finish the pre-manifest job.
 	// Poll with timeout.
@@ -591,7 +624,7 @@ func TestBootcPreManifestLoop_PicksUpJob(t *testing.T) {
 		var readResult worker.BootcPreManifestJobResult
 		jobInfo, err := workerServer.BootcPreManifestJobInfo(preManifestJobID, &readResult)
 		if err == nil && !jobInfo.JobStatus.Finished.IsZero() {
-			assertValidPreManifestResult(t, readResult, archi, specs, false)
+			assertValidPreManifestResult(t, readResult, archi, specs, false, imgType)
 			return
 		}
 
