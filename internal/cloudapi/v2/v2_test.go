@@ -3061,6 +3061,7 @@ func TestComposeBootc(t *testing.T) {
 		imageType                     string
 		expectedImageTypeName         string
 		bootcUseRemoteContainerSource bool
+		installerPayloadRef           string   // if non-empty, include in bootc object
 		uploadJSON                    string   // upload_options or upload_targets JSON fragment
 		expectedStatus                int      // expected HTTP status code
 		expectedBody                  string   // empty = default ComposeId success body
@@ -3174,6 +3175,45 @@ func TestComposeBootc(t *testing.T) {
 				"reason": "Unsupported image type"
 			}`,
 		},
+		{
+			name:                          "image-installer/aws.s3",
+			imageType:                     "image-installer",
+			expectedImageTypeName:         "bootc-installer",
+			bootcUseRemoteContainerSource: true,
+			installerPayloadRef:           "registry.org/payload:tag",
+			uploadJSON:                    `"upload_targets": [{"type": "aws.s3", "upload_options": {"region": "us-east-1"}}]`,
+			expectedStatus:                http.StatusCreated,
+			expectedUploadTargetTypes:     []string{"aws.s3"},
+		},
+		{
+			name:                  "image-installer_missing_payload_ref",
+			imageType:             "image-installer",
+			expectedImageTypeName: "bootc-installer",
+			uploadJSON:            `"upload_targets": [{"type": "aws.s3", "upload_options": {"region": "us-east-1"}}]`,
+			expectedStatus:        http.StatusBadRequest,
+			expectedBody: `{
+				"code": "IMAGE-BUILDER-COMPOSER-46",
+				"details": "",
+				"href": "/api/image-builder-composer/v2/errors/46",
+				"kind": "Error",
+				"reason": "installer_payload_ref is required for image-installer bootc composes"
+			}`,
+		},
+		{
+			name:                  "guest-image_with_forbidden_payload_ref",
+			imageType:             "guest-image",
+			expectedImageTypeName: "qcow2",
+			installerPayloadRef:   "registry.org/payload:tag",
+			uploadJSON:            `"upload_targets": [{"type": "local", "upload_options": {}}]`,
+			expectedStatus:        http.StatusBadRequest,
+			expectedBody: `{
+				"code": "IMAGE-BUILDER-COMPOSER-47",
+				"details": "",
+				"href": "/api/image-builder-composer/v2/errors/47",
+				"kind": "Error",
+				"reason": "installer_payload_ref must not be set for non-installer bootc image types"
+			}`,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -3189,17 +3229,21 @@ func TestComposeBootc(t *testing.T) {
 				uploadFragment = ", " + tc.uploadJSON
 			}
 
+			// Build the bootc JSON object
+			bootcJSON := fmt.Sprintf(`"reference": "%s"`, baseContainerRef)
+			if tc.installerPayloadRef != "" {
+				bootcJSON += fmt.Sprintf(`, "installer_payload_ref": "%s"`, tc.installerPayloadRef)
+			}
+
 			requestBody := fmt.Sprintf(`
 			{
-				"bootc": {
-						"reference": "%s"
-						},
+				"bootc": {%s},
 				"image_request":{
 					"architecture": "x86_64",
 					"repositories": [],
 					"image_type": "%s"%s
 				}
-			}`, baseContainerRef, tc.imageType, uploadFragment)
+			}`, bootcJSON, tc.imageType, uploadFragment)
 
 			expectedBody := tc.expectedBody
 			if expectedBody == "" {
@@ -3302,6 +3346,12 @@ func TestComposeBootc(t *testing.T) {
 			require.NotNil(t, preManifestArgs.ImageOptions.Bootc)
 			require.Equal(t, tc.bootcUseRemoteContainerSource, preManifestArgs.ImageOptions.Bootc.UseRemoteContainerSource,
 				"BootcPreManifestJob.ImageOptions.Bootc.UseRemoteContainerSource should match server config")
+
+			// For installer types, verify InstallerPayloadRef is passed through
+			if tc.installerPayloadRef != "" && tc.expectedStatus == http.StatusCreated {
+				require.Equal(t, tc.installerPayloadRef, preManifestArgs.ImageOptions.Bootc.InstallerPayloadRef,
+					"BootcPreManifestJob.ImageOptions.Bootc.InstallerPayloadRef should match request")
+			}
 
 			// BootcPreManifest depends on BootcInfoResolve
 			require.Len(t, preManifestDeps, 1)
