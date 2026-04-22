@@ -228,6 +228,12 @@
           "x86_64": {
             "base": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest"
           }
+        },
+        "image-installer": {
+          "x86_64": {
+            "base": "TBD_ANACONDA_INSTALLER_CONTAINER_REF",
+            "payload": "quay.io/redhat-services-prod/insights-management-tenant/image-builder-bootc-foundry/rhel-10.1-qcow2:latest"
+          }
         }
       }
     }
