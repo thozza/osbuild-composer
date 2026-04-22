@@ -1388,6 +1388,13 @@ components:
         reference:
           type: string
           example: "quay.io/centos-bootc/centos-bootc:stream9"
+        installer_payload_ref:
+          type: string
+          description: |
+            Bootc container image reference for the OS to be installed by the
+            installer. Required when image_type is image-installer. Must not be
+            set for non-installer image types.
+          example: "quay.io/centos-bootc/centos-bootc:stream9"
     ImageRequest:
       additionalProperties: false
       required:
