@@ -70,7 +70,12 @@ func TestBootcSupportedImageType(t *testing.T) {
 			expectErrMsg:  "unsupported image type \"minimal-raw\" for bootc composes on \"x86_64\"",
 		},
 		{
-			name:          "image-installer not in bootc YAML",
+			name:          "bootc-installer on x86_64",
+			arch:          "x86_64",
+			imageTypeName: "bootc-installer",
+		},
+		{
+			name:          "image-installer not in bootc YAML (remapping happens in handler)",
 			arch:          "x86_64",
 			imageTypeName: "image-installer",
 			expectErrMsg:  "unsupported image type \"image-installer\" for bootc composes on \"x86_64\"",

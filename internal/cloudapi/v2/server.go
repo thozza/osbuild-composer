@@ -579,8 +579,25 @@ func (s *Server) enqueueBootcCompose(request ComposeRequest, channel string) (uu
 
 	imageTypeName := imageTypeFromApiImageType(ir.ImageType)
 
+	// Remap API image type names to bootc YAML names. These are semantically
+	// equivalent image types, named differently across the API and bootc YAML
+	// boundaries.
+	if imageTypeName == "image-installer" {
+		imageTypeName = "bootc-installer"
+	}
+
 	if err := bootcSupportedImageType(ir.Architecture, imageTypeName); err != nil {
 		return uuid.Nil, err
+	}
+
+	isInstaller := imageTypeName == "bootc-installer"
+	hasPayloadRef := request.Bootc.InstallerPayloadRef != nil && *request.Bootc.InstallerPayloadRef != ""
+
+	if isInstaller && !hasPayloadRef {
+		return uuid.Nil, HTTPError(ErrorInstallerPayloadRefRequired)
+	}
+	if !isInstaller && hasPayloadRef {
+		return uuid.Nil, HTTPError(ErrorInstallerPayloadRefForbidden)
 	}
 
 	// Validate and normalize upload targets — consistent with non-bootc flow.
@@ -642,10 +659,14 @@ func (s *Server) enqueueBootcCompose(request ComposeRequest, channel string) (uu
 	seed := bigSeed.Int64()
 
 	// Construct ImageOptions once — used by both BootcPreManifest and ManifestByID.
+	bootcOptions := &distro.BootcImageOptions{
+		UseRemoteContainerSource: s.config.BootcUseRemoteContainerSource,
+	}
+	if request.Bootc.InstallerPayloadRef != nil {
+		bootcOptions.InstallerPayloadRef = *request.Bootc.InstallerPayloadRef
+	}
 	imageOptions := distro.ImageOptions{
-		Bootc: &distro.BootcImageOptions{
-			UseRemoteContainerSource: s.config.BootcUseRemoteContainerSource,
-		},
+		Bootc: bootcOptions,
 	}
 
 	// 1. Handle Bootc info resolution job
